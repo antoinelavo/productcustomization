@@ -33,7 +33,7 @@ const COLORS = [
   '#EF674E',  // red
 ]
 
-export default function ProductCustomizer() {
+export default function ProductCustomizer({ product }) {
   const [state, setState] = useState({
     selectedColor: '#ffffff',
     uploadedImage: null,
@@ -95,7 +95,7 @@ export default function ProductCustomizer() {
           <Environment files="https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/potsdamer_platz_1k.hdr" />
           <Suspense fallback={null}>
             <CameraRig>
-              <Backdrop color="#b4b4b4ff" />
+              <Backdrop color="#b4b4b4" />
               <Center>
                 <Shirt 
                   color={state.selectedColor} 

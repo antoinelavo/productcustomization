@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Star, ThumbsUp, User, ChevronDown, ChevronUp } from 'lucide-react';
 
-export default function ReviewsSection() {
+export default function ReviewsSection({ product }) {
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [sortBy, setSortBy] = useState('newest');
 

@@ -1,37 +1,81 @@
-// @/components/FeaturedProducts.jsx
-import React from 'react';
+// @/components/SetPromotion.jsx
+import React, { useState, useEffect } from 'react';
 import { Heart, ShoppingCart } from 'lucide-react';
 
 export default function SetPromotion() {
-  const products = [
-    {
-      title: 'Best 2종',
-      subtitle: '티셔츠 + 에코백',
-      image: '/images/SetPromotion/set1.png',
-      originalPrice: '49900',
-      salePrice: '39900',
-      badge: '베스트셀러',
-      badgeColor: 'bg-red-500'
-    },
-    {
-      title: 'Best 2종',
-      subtitle: '티셔츠 + 텀블러',
-      image: '/images/SetPromotion/set2.png',
-      originalPrice: '49900',
-      salePrice: '39900',
-      badge: '신상품',
-      badgeColor: 'bg-blue-500'
-    },
-    {
-      title: 'Best 3종',
-      subtitle: '티셔츠 + 텀블러 + 에코백',
-      image: '/images/SetPromotion/set3.png',
-      originalPrice: '49900',
-      salePrice: '39900',
-      badge: '신상품',
-      badgeColor: 'bg-blue-500'
-    }
-  ];
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch bundle products from API
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const response = await fetch('/api/products/bundles');
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to fetch bundle products');
+        }
+
+        setProducts(data);
+      } catch (err) {
+        console.error('Error fetching bundle products:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  // Loading state
+  if (loading) {
+    return (
+      <section className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Best 상품을 세트로 저렴하게!
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-2xl overflow-hidden shadow-lg">
+                <div className="aspect-square bg-gray-200 animate-pulse"></div>
+                <div className="p-4">
+                  <div className="h-4 bg-gray-200 rounded animate-pulse mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded animate-pulse mb-3"></div>
+                  <div className="h-4 bg-gray-200 rounded animate-pulse mb-4"></div>
+                  <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <section className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Best 상품을 세트로 저렴하게!
+            </h2>
+            <p className="text-red-600">번들 상품을 불러오는데 실패했습니다: {error}</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="py-16 bg-gray-50">
@@ -47,7 +91,7 @@ export default function SetPromotion() {
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-6">
           {products.map((product, index) => (
             <div
-              key={index}
+              key={product.slug}
               className="group bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2"
             >
               {/* Product Image Container */}
@@ -126,9 +170,11 @@ export default function SetPromotion() {
                 </div>
 
                 {/* CTA Button */}
-                <button className="w-full bg-gray-900 hover:bg-gray-800 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-200 transform hover:scale-105">
-                  자세히 보기
-                </button>
+                <a href={`/product/${product.slug}`}>
+                  <button className="w-full bg-gray-900 hover:bg-gray-800 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-200 transform hover:scale-105">
+                    자세히 보기
+                  </button>
+                </a>
               </div>
             </div>
           ))}
