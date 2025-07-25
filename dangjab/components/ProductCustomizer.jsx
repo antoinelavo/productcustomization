@@ -19,7 +19,8 @@ import {
   ChevronDown,
   Menu,
   X,
-  ShoppingCart
+  ShoppingCart,
+  Info
 } from 'lucide-react'
 
 const COLORS = [
@@ -85,17 +86,25 @@ export default function ProductCustomizer({ product }) {
   return (
     <section className="relative w-full h-[80svh] md:h-[80svh] bg-gray-50">
       {/* 3D Canvas Background */}
-      <div className="absolute inset-0 w-full lg:w-[70%] h-full">
+      <div 
+        className="absolute inset-0 w-full lg:w-[70%] h-full"
+        style={{
+          backgroundImage: 'url(/images/grass-background.jpg)', // Add your grass image to public folder
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      >
         <Canvas 
           shadows 
           camera={{ position: [0, 0, 2.5], fov: 25 }} 
-          gl={{ preserveDrawingBuffer: true, antialias: false }}
+          gl={{ preserveDrawingBuffer: true, antialias: false, alpha: true }}
         >
           <ambientLight intensity={0.5 * Math.PI} />
           <Environment files="https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/potsdamer_platz_1k.hdr" />
           <Suspense fallback={null}>
             <CameraRig>
-              <Backdrop color="#b4b4b4" />
+              <TransparentBackdrop />
               <Center>
                 <Shirt 
                   color={state.selectedColor} 
@@ -153,6 +162,20 @@ function DesktopCustomizer({ state, setState, fileInputRef, handleImageUpload, h
     <div className="w-full h-full flex">
       {/* Left area - 3D Preview (70%) */}
       <div className="flex-[0.7] relative">
+        {/* Disclaimer - Top Left */}
+        <div className="absolute top-6 left-6 z-50 pointer-events-auto">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 shadow-sm max-w-xs">
+            <div className="flex items-start space-x-2">
+              <Info className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-yellow-800">
+                <p className="font-medium mb-1">미리보기 안내</p>
+                <p className="text-xs leading-relaxed">
+                  모든 제품은 전문 디자이너가 고객님과 무료 1:1 상담과 디자인 한 후 제작됩니다.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Right Panel - Controls (30%) */}
@@ -162,8 +185,10 @@ function DesktopCustomizer({ state, setState, fileInputRef, handleImageUpload, h
         </div>
 
         <PreviewImages 
-          selectedImage={state.uploadedImage}
-          onImageSelect={handlePreviewSelect}
+        selectedImage={state.uploadedImage}
+        onImageSelect={handlePreviewSelect}
+        fileInputRef={fileInputRef}
+        handleImageUpload={handleImageUpload}
         />
 
         <TextCustomizer 
@@ -250,6 +275,21 @@ function MobileCustomizer({ state, setState, fileInputRef, handleImageUpload, ha
         </div>
       </div>
 
+      {/* Disclaimer - Mobile Top Left (below top controls) */}
+      <div className="absolute top-20 left-4 right-4 z-40 pointer-events-auto">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 shadow-sm">
+          <div className="flex items-start space-x-2">
+            <Info className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+            <div className="text-sm text-yellow-800">
+              <p className="font-medium mb-1">미리보기 안내</p>
+              <p className="text-xs leading-relaxed">
+                이것은 참고용 미리보기입니다. 모든 디자인은 전문 디자이너가 최종 검토 후 제작됩니다.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Left Side Drawer */}
       <motion.div
         initial={{ x: "-100%" }}
@@ -297,8 +337,10 @@ function MobileCustomizer({ state, setState, fileInputRef, handleImageUpload, ha
             {activeTab === 'images' && (
               <div className="space-y-6">
                 <PreviewImages 
-                  selectedImage={state.uploadedImage}
-                  onImageSelect={handlePreviewSelect}
+                selectedImage={state.uploadedImage}
+                onImageSelect={handlePreviewSelect}
+                fileInputRef={fileInputRef}
+                handleImageUpload={handleImageUpload}
                 />
               </div>
             )}
@@ -373,13 +415,8 @@ function MobileCustomizer({ state, setState, fileInputRef, handleImageUpload, ha
 }
 
 // 3D Components
-function Backdrop({ color }) {
+function TransparentBackdrop() {
   const shadows = useRef()
-  useFrame((state, delta) => {
-    if (shadows.current?.getMesh()?.material?.color) {
-      easing.dampC(shadows.current.getMesh().material.color, color, 0.25, delta)
-    }
-  })
   
   return (
     <AccumulativeShadows
@@ -391,6 +428,7 @@ function Backdrop({ color }) {
       resolution={2048}
       rotation={[Math.PI / 2, 0, 0]}
       position={[0, 0, -0.14]}
+      opacity={0.2} // Adjust shadow opacity as needed (0.6 = 60% opacity)
     >
       <RandomizedLight amount={4} radius={9} intensity={0.55 * Math.PI} ambient={0.25} position={[5, 5, -10]} />
       <RandomizedLight amount={4} radius={5} intensity={0.25 * Math.PI} ambient={0.55} position={[-5, 5, -9]} />

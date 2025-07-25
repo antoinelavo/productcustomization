@@ -1,11 +1,12 @@
 // /components/ProductInfo.jsx
 import React, { useState } from 'react';
-import { ShoppingCart, Minus, Plus, Package, Star } from 'lucide-react';
+import { ShoppingCart, Package, Star } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 
-
 export default function ProductInfo({ product }) {
-  const [quantity, setQuantity] = useState(1);
+  const [selectedQuantity, setSelectedQuantity] = useState(1);
+  const [customQuantity, setCustomQuantity] = useState('');
+  const [showCustomInput, setShowCustomInput] = useState(false);
   const cartStuff = useCart();
   const { addToCart } = cartStuff;
 
@@ -14,40 +15,69 @@ export default function ProductInfo({ product }) {
     return new Intl.NumberFormat('ko-KR').format(price);
   };
 
-  // Calculate total price
-  const totalPrice = product.current_price * quantity;
-
-  // Handle quantity changes
-  const increaseQuantity = () => {
-    setQuantity(prev => prev + 1);
+  // Calculate discount percentage based on quantity
+  const getDiscountPercentage = (quantity) => {
+    if (quantity === 1) return 0;
+    if (quantity <= 10) return (quantity - 1) * 1.25;
+    return 11.25; // Fixed discount for 10+ units
   };
 
-  const decreaseQuantity = () => {
-    setQuantity(prev => prev > 1 ? prev - 1 : 1);
+  // Calculate discounted price per unit
+  const getDiscountedPricePerUnit = (quantity) => {
+    const discountPercentage = getDiscountPercentage(quantity);
+    return product.current_price * (1 - discountPercentage / 100);
   };
 
-  const handleQuantityInput = (e) => {
-    const value = parseInt(e.target.value);
-    if (value >= 1) {
-      setQuantity(value);
+  // Calculate total price for a given quantity
+  const getTotalPrice = (quantity) => {
+    return getDiscountedPricePerUnit(quantity) * quantity;
+  };
+
+  // Get current quantity (either selected or custom)
+  const getCurrentQuantity = () => {
+    if (showCustomInput && customQuantity) {
+      return parseInt(customQuantity) || 10;
+    }
+    return selectedQuantity;
+  };
+
+  // Handle quantity selection
+  const handleQuantitySelect = (quantity) => {
+    if (quantity === '10+') {
+      setShowCustomInput(true);
+      setSelectedQuantity(10);
+    } else {
+      setShowCustomInput(false);
+      setSelectedQuantity(quantity);
+      setCustomQuantity('');
     }
   };
 
-    const handleAddToCart = () => {
-        console.log('🛒 Adding to cart:', product.name, 'Quantity:', quantity);
+  // Handle custom quantity input
+  const handleCustomQuantityChange = (e) => {
+    const value = e.target.value;
+    if (value === '' || (parseInt(value) >= 10 && parseInt(value) <= 999)) {
+      setCustomQuantity(value);
+    }
+  };
+
+  const handleAddToCart = () => {
+    const quantity = getCurrentQuantity();
+    console.log('🛒 Adding to cart:', product.name, 'Quantity:', quantity);
+    
     // For now, we'll add basic customization data
     // Later we'll connect this with the ProductCustomizer
     const customization = {
-        uploadedImage: null,
-        textSettings: {
+      uploadedImage: null,
+      textSettings: {
         topText: '',
         bottomText: '',
         leftText: '',
         rightText: '',
         textColor: '#8B4513',
         fontSize: 'medium'
-        },
-        selectedColor: '#ffffff'
+      },
+      selectedColor: '#ffffff'
     };
 
     // Actually add to cart using our cart context!
@@ -55,7 +85,7 @@ export default function ProductInfo({ product }) {
     
     // Show success message
     alert(`${product.name} ${quantity}개가 장바구니에 추가되었습니다!`);
-    };
+  };
 
   return (
     <section className="py-8 bg-white border-t border-gray-200">
@@ -79,8 +109,6 @@ export default function ProductInfo({ product }) {
                 </span>
               </h1>
               
-              
-
               {/* Description */}
               <p className="text-lg text-gray-700">
                 {product.description}
@@ -124,81 +152,119 @@ export default function ProductInfo({ product }) {
           {/* Right Column - Purchase Options */}
           <div className="space-y-6">
             
-            {/* Pricing */}
+            {/* Bulk Pricing Options */}
             <div className="bg-gray-50 rounded-2xl p-6">
               <div className="space-y-4">
                 
-                {/* Price Display */}
+                {/* Pricing Header */}
                 <div>
-                  <div className="flex items-baseline space-x-3">
-                    <span className="text-3xl font-bold text-gray-900">
-                      {formatPrice(product.current_price)}원
-                    </span>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">수량별 가격</h3>
+                  <p className="text-sm text-gray-600">수량이 많을수록 개당 가격이 저렴해집니다!</p>
+                </div>
+
+                {/* Quantity-Price List */}
+                <div className="space-y-2">
+                  {/* Quantities 1-10 */}
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((qty) => {
+                    const isSelected = !showCustomInput && selectedQuantity === qty;
+                    const discountPercent = getDiscountPercentage(qty);
+                    const pricePerUnit = getDiscountedPricePerUnit(qty);
+                    const totalPrice = getTotalPrice(qty);
                     
-                    {product.has_discount && (
-                      <>
-                        <span className="text-lg text-gray-500 line-through">
-                          {formatPrice(product.original_price)}원
+                    return (
+                      <button
+                        key={qty}
+                        onClick={() => handleQuantitySelect(qty)}
+                        className={`w-full p-3 rounded-lg border-2 transition-all duration-200 text-left ${
+                          isSelected 
+                            ? 'border-blue-500 bg-blue-50 shadow-md' 
+                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <span className="font-semibold text-gray-900">
+                              {qty}개
+                            </span>
+                            {discountPercent > 0 && (
+                              <span className="bg-red-100 text-red-800 text-xs font-medium px-2 py-1 rounded-full">
+                                {discountPercent.toFixed(1)}% 할인
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <div className="font-bold text-gray-900">
+                              {formatPrice(Math.round(totalPrice))}원
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              개당 {formatPrice(Math.round(pricePerUnit))}원
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+
+                  {/* 10+ Option */}
+                  <button
+                    onClick={() => handleQuantitySelect('10+')}
+                    className={`w-full p-3 rounded-lg border-2 transition-all duration-200 text-left ${
+                      showCustomInput 
+                        ? 'border-blue-500 bg-blue-50 shadow-md' 
+                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <span className="font-semibold text-gray-900">
+                          10+ 개
                         </span>
-                        <span className="bg-red-100 text-red-800 text-sm font-medium px-2 py-1 rounded-full">
-                          {product.discount_percentage}% 할인
+                        <span className="bg-red-100 text-red-800 text-xs font-medium px-2 py-1 rounded-full">
+                          11.3% 할인
                         </span>
-                      </>
-                    )}
-                  </div>
-                  
-                  {product.has_discount && (
-                    <p className="text-sm text-green-600 mt-1">
-                      {formatPrice(product.savings)}원 절약!
-                    </p>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-bold text-gray-900">
+                          최대 할인가
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          개당 {formatPrice(Math.round(getDiscountedPricePerUnit(10)))}원
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Custom Quantity Input */}
+                  {showCustomInput && (
+                    <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        정확한 수량을 입력해주세요 (10개 이상)
+                      </label>
+                      <input
+                        type="number"
+                        min="10"
+                        max="999"
+                        value={customQuantity}
+                        onChange={handleCustomQuantityChange}
+                        placeholder="10"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
                   )}
                 </div>
 
-                {/* Quantity Selector */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    수량
-                  </label>
-                  <div className="flex items-center space-x-3">
-                    <button
-                      onClick={decreaseQuantity}
-                      className="w-10 h-10 rounded-lg border border-gray-300 flex items-center justify-center hover:bg-gray-50 disabled:opacity-50"
-                      disabled={quantity <= 1}
-                    >
-                      <Minus size={16} />
-                    </button>
-                    
-                    <input
-                      type="number"
-                      min="1"
-                      max="99"
-                      value={quantity}
-                      onChange={handleQuantityInput}
-                      className="w-16 h-10 text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                    
-                    <button
-                      onClick={increaseQuantity}
-                      className="w-10 h-10 rounded-lg border border-gray-300 flex items-center justify-center hover:bg-gray-50"
-                    >
-                      <Plus size={16} />
-                    </button>
-                    
-                    <span className="text-sm text-gray-600 ml-2">
-                      개
-                    </span>
-                  </div>
-                </div>
-
-                {/* Total Price */}
+                {/* Total Price Display */}
                 <div className="border-t border-gray-200 pt-4">
                   <div className="flex items-center justify-between">
                     <span className="text-lg font-semibold text-gray-900">
                       총 결제금액
                     </span>
                     <span className="text-2xl font-bold text-blue-600">
-                      {formatPrice(totalPrice)}원
+                      {formatPrice(Math.round(getTotalPrice(getCurrentQuantity())))}원
                     </span>
+                  </div>
+                  <div className="text-sm text-gray-600 text-right mt-1">
+                    {getCurrentQuantity()}개 × {formatPrice(Math.round(getDiscountedPricePerUnit(getCurrentQuantity())))}원
                   </div>
                 </div>
 
@@ -208,7 +274,7 @@ export default function ProductInfo({ product }) {
                   className="w-full bg-gray-900 hover:bg-gray-800 text-white font-bold py-4 px-6 rounded-xl transition-colors duration-200 flex items-center justify-center space-x-2"
                 >
                   <ShoppingCart size={20} />
-                  <span>장바구니에 담기</span>
+                  <span>장바구니에 담기 ({getCurrentQuantity()}개)</span>
                 </button>
 
                 {/* Quick Buy Button */}
