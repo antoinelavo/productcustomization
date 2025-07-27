@@ -1,29 +1,35 @@
-// pages/instagram.js
+// pages/instagram.js - FIXED VERSION (no double tracking)
 import { useEffect } from 'react'
 import { useRouter } from 'next/router'
+// ✅ NO import of captureTrafficSource
 
 export default function InstagramRedirect() {
   const router = useRouter()
 
   useEffect(() => {
-    // Small delay to let TrafficTracker capture the source
+    console.log('📱 Instagram redirect page loaded')
+    
+    // ✅ Just wait for TrafficTracker (from _app.js) to do its job
+    // ✅ NO direct call to captureTrafficSource() here
     const timer = setTimeout(() => {
-      router.replace('/') // Redirect to homepage
-    }, 100)
+      console.log('🔄 Redirecting to homepage...')
+      router.replace('/')
+    }, 1500)
 
     return () => clearTimeout(timer)
   }, [router])
 
-  // Show a loading message while redirecting
   return (
     <div style={{ 
       display: 'flex', 
+      flexDirection: 'column',
       justifyContent: 'center', 
       alignItems: 'center', 
       height: '100vh',
       fontFamily: 'Arial, sans-serif'
     }}>
-      <p>Redirecting...</p>
+      <p>인스타그램에서 오신걸 환영합니다!</p>
+      <p>로딩중...</p>
     </div>
   )
 }

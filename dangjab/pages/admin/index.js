@@ -13,6 +13,7 @@ import {
   Bell
 } from 'lucide-react'
 import OrderManagement from '@/pages/admin/components/OrderManagement'
+import Analytics from '@/pages/admin/components/Analytics'
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState('orders')
@@ -60,6 +61,8 @@ export default function AdminPage() {
     switch (activeTab) {
       case 'orders':
         return <OrderManagement />
+      case 'analytics':
+        return <Analytics />
       
       default:
         const currentTab = tabs.find(tab => tab.id === activeTab)
