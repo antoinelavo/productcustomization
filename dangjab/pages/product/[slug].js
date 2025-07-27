@@ -16,6 +16,27 @@ export default function ProductPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // ✨ NEW: Customization state management
+  const [customizationData, setCustomizationData] = useState({
+    selectedColor: '#ffffff',
+    uploadedImage: null,
+    selectedSize: 'M',
+    textSettings: {
+      topText: '',
+      bottomText: '',
+      leftText: '',
+      rightText: '',
+      textColor: '#8B4513',
+      fontSize: 'medium'
+    }
+  });
+
+  // ✨ NEW: Handler to update customization data from ProductCustomizer
+  const handleCustomizationChange = (newCustomizationData) => {
+    setCustomizationData(newCustomizationData);
+    console.log('🎨 Customization updated:', newCustomizationData);
+  };
+
   // Fetch product data
   useEffect(() => {
     if (!slug) return;
@@ -43,6 +64,26 @@ export default function ProductPage() {
 
     fetchProduct();
   }, [slug]);
+
+  // ✨ NEW: Reset customization when product changes
+  useEffect(() => {
+    if (product) {
+      // Reset customization data for new product
+      setCustomizationData({
+        selectedColor: '#ffffff',
+        uploadedImage: null,
+        selectedSize: 'M',
+        textSettings: {
+          topText: '',
+          bottomText: '',
+          leftText: '',
+          rightText: '',
+          textColor: '#8B4513',
+          fontSize: 'medium'
+        }
+      });
+    }
+  }, [product?.id]); // Reset when product ID changes
 
   // Loading state
   if (loading) {
@@ -94,11 +135,18 @@ export default function ProductPage() {
 
   return (
     <Layout>
-      {/* Product Customizer with product data */}
-      <ProductCustomizer product={product} />
+      {/* Product Customizer with connected state */}
+      <ProductCustomizer 
+        product={product}
+        customizationData={customizationData}
+        onCustomizationChange={handleCustomizationChange}
+      />
       
-      {/* Product Info Section (Pricing, Quantity, Add to Cart) */}
-      <ProductInfo product={product} />
+      {/* Product Info Section with customization data */}
+      <ProductInfo 
+        product={product} 
+        customizationData={customizationData}
+      />
       
       {/* Product Description */}
       <ProductDescription product={product} />

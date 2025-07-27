@@ -7,7 +7,7 @@ import CheckoutSummary from '@/components/CheckoutSummary';
 import { useRouter } from 'next/router';
 
 export default function CheckoutPage() {
-  const { getCartTotals } = useCart();
+  const { getCartTotals, clearCart } = useCart();
   const { hasItems } = getCartTotals();
   const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -22,25 +22,21 @@ export default function CheckoutPage() {
   const handleOrderSubmit = async (orderData) => {
     setIsProcessing(true);
     try {
-      const response = await fetch('/api/orders/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(orderData),
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        // Redirect to success page
-        router.push(`/checkout/success?orderId=${result.orderId}`);
-      } else {
-        throw new Error(result.error || 'Order creation failed');
-      }
+      // The payment has already been verified and order created in CheckoutForm
+      // We just need to clear the cart and redirect to success page
+      
+      console.log('✅ Order completed successfully:', orderData.groupOrderId || orderData.orderId);
+      
+      // Clear the cart since order is complete
+      clearCart();
+      
+      // Redirect to success page with the order ID
+      const orderId = orderData.groupOrderId || orderData.orderId;
+      router.push(`/checkout/success?orderId=${orderId}`);
+      
     } catch (error) {
-      console.error('Order submission error:', error);
-      alert('주문 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+      console.error('Order completion error:', error);
+      alert('주문 완료 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
     } finally {
       setIsProcessing(false);
     }

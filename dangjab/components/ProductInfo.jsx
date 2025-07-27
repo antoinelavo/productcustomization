@@ -1,9 +1,9 @@
 // /components/ProductInfo.jsx
 import React, { useState } from 'react';
-import { ShoppingCart, Package, Star } from 'lucide-react';
+import { ShoppingCart, Package, Star, Image } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 
-export default function ProductInfo({ product }) {
+export default function ProductInfo({ product, customizationData = null }) {
   const [selectedQuantity, setSelectedQuantity] = useState(1);
   const [customQuantity, setCustomQuantity] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
@@ -61,13 +61,23 @@ export default function ProductInfo({ product }) {
     }
   };
 
+  // Check if user has added customizations
+  const hasCustomizations = customizationData && (
+    customizationData.uploadedImage || 
+    customizationData.textSettings?.topText ||
+    customizationData.textSettings?.bottomText ||
+    customizationData.textSettings?.leftText ||
+    customizationData.textSettings?.rightText ||
+    customizationData.selectedColor !== '#ffffff'
+  );
+
   const handleAddToCart = () => {
     const quantity = getCurrentQuantity();
     console.log('🛒 Adding to cart:', product.name, 'Quantity:', quantity);
+    console.log('🎨 Customization data:', customizationData);
     
-    // For now, we'll add basic customization data
-    // Later we'll connect this with the ProductCustomizer
-    const customization = {
+    // Use the passed customization data or fall back to defaults
+    const customization = customizationData || {
       uploadedImage: null,
       textSettings: {
         topText: '',
@@ -80,11 +90,18 @@ export default function ProductInfo({ product }) {
       selectedColor: '#ffffff'
     };
 
+    console.log('📦 Final customization being added to cart:', customization);
+
     // Actually add to cart using our cart context!
     addToCart(product, quantity, customization);
     
-    // Show success message
-    alert(`${product.name} ${quantity}개가 장바구니에 추가되었습니다!`);
+    // Show success message with customization info
+    let successMessage = `${product.name} ${quantity}개가 장바구니에 추가되었습니다!`;
+    if (hasCustomizations) {
+      successMessage += '\n커스터마이징 옵션이 포함되었습니다.';
+    }
+    
+    alert(successMessage);
   };
 
   return (
@@ -114,6 +131,68 @@ export default function ProductInfo({ product }) {
                 {product.description}
               </p>
             </div>
+
+            {/* Customization Preview */}
+            {hasCustomizations && (
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                <h3 className="font-semibold text-blue-900 mb-3 flex items-center">
+                  <Image className="w-4 h-4 mr-2" />
+                  선택된 커스터마이징
+                </h3>
+                
+                <div className="space-y-2 text-sm">
+                  {customizationData?.uploadedImage && (
+                    <div className="flex items-center space-x-2">
+                      <span className="text-blue-700">✓ 업로드된 이미지:</span>
+                      <span className="text-blue-600 font-medium">
+                        {customizationData.uploadedImage.includes('supabase') ? '사용자 업로드 이미지' : '선택된 이미지'}
+                      </span>
+                    </div>
+                  )}
+                  
+                  {customizationData?.textSettings?.topText && (
+                    <div className="flex items-center space-x-2">
+                      <span className="text-blue-700">✓ 상단 텍스트:</span>
+                      <span className="text-blue-600 font-medium">"{customizationData.textSettings.topText}"</span>
+                    </div>
+                  )}
+                  
+                  {customizationData?.textSettings?.bottomText && (
+                    <div className="flex items-center space-x-2">
+                      <span className="text-blue-700">✓ 하단 텍스트:</span>
+                      <span className="text-blue-600 font-medium">"{customizationData.textSettings.bottomText}"</span>
+                    </div>
+                  )}
+                  
+                  {customizationData?.textSettings?.leftText && (
+                    <div className="flex items-center space-x-2">
+                      <span className="text-blue-700">✓ 좌측 텍스트:</span>
+                      <span className="text-blue-600 font-medium">"{customizationData.textSettings.leftText}"</span>
+                    </div>
+                  )}
+                  
+                  {customizationData?.textSettings?.rightText && (
+                    <div className="flex items-center space-x-2">
+                      <span className="text-blue-700">✓ 우측 텍스트:</span>
+                      <span className="text-blue-600 font-medium">"{customizationData.textSettings.rightText}"</span>
+                    </div>
+                  )}
+                  
+                  {customizationData?.selectedColor && customizationData.selectedColor !== '#ffffff' && (
+                    <div className="flex items-center space-x-2">
+                      <span className="text-blue-700">✓ 선택된 색상:</span>
+                      <div className="flex items-center space-x-2">
+                        <div 
+                          className="w-4 h-4 rounded border border-gray-300"
+                          style={{ backgroundColor: customizationData.selectedColor }}
+                        ></div>
+                        <span className="text-blue-600 font-medium">{customizationData.selectedColor}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Bundle Contents */}
             {product.category === 'bundle' && product.bundle_contents.length > 0 && (
@@ -271,10 +350,17 @@ export default function ProductInfo({ product }) {
                 {/* Add to Cart Button */}
                 <button
                   onClick={handleAddToCart}
-                  className="w-full bg-gray-900 hover:bg-gray-800 text-white font-bold py-4 px-6 rounded-xl transition-colors duration-200 flex items-center justify-center space-x-2"
+                  className={`w-full font-bold py-4 px-6 rounded-xl transition-colors duration-200 flex items-center justify-center space-x-2 ${
+                    hasCustomizations 
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                      : 'bg-gray-900 hover:bg-gray-800 text-white'
+                  }`}
                 >
                   <ShoppingCart size={20} />
-                  <span>장바구니에 담기 ({getCurrentQuantity()}개)</span>
+                  <span>
+                    장바구니에 담기 ({getCurrentQuantity()}개)
+                    {hasCustomizations && ' ✨'}
+                  </span>
                 </button>
 
                 {/* Quick Buy Button */}

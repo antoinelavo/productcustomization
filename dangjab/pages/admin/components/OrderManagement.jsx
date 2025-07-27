@@ -196,7 +196,7 @@ export default function OrderManagement() {
     try {
       // Simple CSV export (you can enhance this to proper Excel)
       const csvContent = generateCSV(filteredOrders)
-      downloadCSV(csvContent, `orders_${new Date().toISOString().split('T')[0]}.csv`)
+      downloadCSV(csvContent, `주문_${new Date().toISOString().split('T')[0]}.csv`)
     } catch (error) {
       console.error('Error generating Excel:', error)
       alert('엑셀 다운로드 중 오류가 발생했습니다.')
@@ -302,7 +302,7 @@ export default function OrderManagement() {
   }
 
   const downloadCSV = (content, filename) => {
-    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
+    const blob = new Blob(['\uFEFF' + content], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
     const url = URL.createObjectURL(blob)
     link.setAttribute('href', url)
@@ -315,19 +315,12 @@ export default function OrderManagement() {
 
 // Helper function with debugging
 const getUserImageUrl = (item) => {
-  console.log('🔍 getUserImageUrl called with item:', item)
-  console.log('📝 customization_data:', item.customization_data)
-  
-  const imageUrl = item.customization_data?.userImage || null
-  console.log('🌐 Retrieved imageUrl:', imageUrl)
-  
+  const imageUrl = item.customization_data?.uploadedImage || null
   return imageUrl
 }
 
-// Helper function with debugging  
 const hasUserImage = (item) => {
-  const hasImage = !!(item.customization_data && item.customization_data.userImage)
-  console.log('🖼️ hasUserImage check for item:', item.order_id, 'Result:', hasImage)
+  const hasImage = !!(item.customization_data && item.customization_data.uploadedImage)
   return hasImage
 }
 

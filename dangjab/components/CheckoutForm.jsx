@@ -174,6 +174,7 @@ export default function CheckoutForm({ onSubmit, isProcessing }) {
           cartItems,
           paymentId: payment.paymentId,
           paymentData: payment,
+          groupOrderId: verificationResult.groupOrderId,
           success: true
         });
       } else {

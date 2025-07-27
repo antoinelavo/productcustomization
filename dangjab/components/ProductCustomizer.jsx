@@ -1,7 +1,7 @@
 // @/components/ProductCustomizer.jsx
 'use client'
 
-import React, { useState, useRef, Suspense } from 'react'
+import React, { useState, useRef, Suspense, useEffect } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { useGLTF, useTexture, AccumulativeShadows, RandomizedLight, Decal, Environment, Center } from '@react-three/drei'
 import { easing } from 'maath'
@@ -9,6 +9,7 @@ import { motion } from 'framer-motion'
 import PreviewImages from '@/components/PreviewImages'
 import TextCustomizer from '@/components/TextCustomizer'
 import { useCompositeImage } from '@/components/ImageTextCompositor'
+import { uploadImageToStorage } from '@/lib/supabaseStorage'
 
 import { 
   Upload, 
@@ -20,7 +21,8 @@ import {
   Menu,
   X,
   ShoppingCart,
-  Info
+  Info,
+  Loader2
 } from 'lucide-react'
 
 const COLORS = [
@@ -34,43 +36,79 @@ const COLORS = [
   '#EF674E',  // red
 ]
 
-export default function ProductCustomizer({ product }) {
-  const [state, setState] = useState({
-    selectedColor: '#ffffff',
-    uploadedImage: null,
-    selectedSize: 'M',
-    textSettings: {
-      topText: '',
-      bottomText: '',
-      leftText: '',
-      rightText: '',
-      textColor: '#8B4513',
-      fontSize: 'medium'
-    }
+export default function ProductCustomizer({ product, customizationData, onCustomizationChange }) {
+  const [state, setState] = useState(customizationData)
+  
+  const [uploadState, setUploadState] = useState({
+    isUploading: false,
+    uploadError: null
   })
   
   const fileInputRef = useRef(null)
 
+  // Sync with parent when customizationData changes
+  useEffect(() => {
+    setState(customizationData);
+  }, [customizationData]);
+
+  // Helper function to update state and notify parent
+  const updateCustomization = (newState) => {
+    setState(newState);
+    if (onCustomizationChange) {
+      onCustomizationChange(newState);
+    }
+  };
+
   // Generate composite image with text overlay
   const { compositeImage, isGenerating, CompositorComponent } = useCompositeImage(state.uploadedImage, state.textSettings)
 
-  const handleImageUpload = (event) => {
+  const handleImageUpload = async (event) => {
     const file = event.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        setState(prev => ({ ...prev, uploadedImage: e.target?.result }))
+    if (!file) return
+
+    // Reset upload state
+    setUploadState({ isUploading: true, uploadError: null })
+
+    try {
+      console.log('📤 Starting image upload:', file.name);
+
+      // Upload to Supabase Storage
+      const { url, error } = await uploadImageToStorage(file)
+
+      if (error) {
+        console.error('❌ Upload failed:', error);
+        setUploadState({ isUploading: false, uploadError: error })
+        return
       }
-      reader.readAsDataURL(file)
+
+      if (url) {
+        console.log('✅ Upload successful, URL:', url);
+        updateCustomization(prev => ({ ...prev, uploadedImage: url }))
+        setUploadState({ isUploading: false, uploadError: null })
+      }
+
+    } catch (error) {
+      console.error('❌ Upload error:', error);
+      setUploadState({ 
+        isUploading: false, 
+        uploadError: 'Upload failed. Please try again.' 
+      })
+    }
+
+    // Clear the file input so the same file can be uploaded again if needed
+    if (event.target) {
+      event.target.value = ''
     }
   }
 
   const handlePreviewSelect = (imageUrl) => {
-    setState(prev => ({ ...prev, uploadedImage: imageUrl }))
+    updateCustomization(prev => ({ ...prev, uploadedImage: imageUrl }))
+    // Clear any upload errors when selecting a preview image
+    setUploadState(prev => ({ ...prev, uploadError: null }))
   }
 
   const handleTextChange = (newTextSettings) => {
-    setState(prev => ({ ...prev, textSettings: newTextSettings }))
+    updateCustomization(prev => ({ ...prev, textSettings: newTextSettings }))
   }
 
   const downloadDesign = () => {
@@ -122,7 +160,8 @@ export default function ProductCustomizer({ product }) {
       <div className="absolute inset-0 w-full h-full pointer-events-none">
         <ResponsiveCustomizer 
           state={state} 
-          setState={setState}
+          updateCustomization={updateCustomization}
+          uploadState={uploadState}
           fileInputRef={fileInputRef}
           handleImageUpload={handleImageUpload}
           handlePreviewSelect={handlePreviewSelect}
@@ -154,7 +193,7 @@ function ResponsiveCustomizer(props) {
 }
 
 // Desktop layout
-function DesktopCustomizer({ state, setState, fileInputRef, handleImageUpload, handlePreviewSelect, handleTextChange, downloadDesign, isGenerating, compositeImage }) {
+function DesktopCustomizer({ state, updateCustomization, uploadState, fileInputRef, handleImageUpload, handlePreviewSelect, handleTextChange, downloadDesign, isGenerating, compositeImage }) {
   const hasTextContent = state.textSettings.topText || state.textSettings.bottomText || 
                         state.textSettings.leftText || state.textSettings.rightText
 
@@ -176,6 +215,21 @@ function DesktopCustomizer({ state, setState, fileInputRef, handleImageUpload, h
             </div>
           </div>
         </div>
+
+        {/* Upload Status Overlay */}
+        {uploadState.isUploading && (
+          <div className="absolute inset-0 bg-black/20 flex items-center justify-center z-40 pointer-events-auto">
+            <div className="bg-white rounded-lg p-6 shadow-xl max-w-sm mx-4">
+              <div className="flex items-center space-x-3">
+                <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                <div>
+                  <p className="font-medium text-gray-900">이미지 업로드 중...</p>
+                  <p className="text-sm text-gray-600">잠시만 기다려주세요</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Right Panel - Controls (30%) */}
@@ -184,11 +238,21 @@ function DesktopCustomizer({ state, setState, fileInputRef, handleImageUpload, h
           <h2 className="text-2xl font-bold text-gray-900 mb-6">커스터마이징</h2>
         </div>
 
+        {/* Hidden file input for uploads */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleImageUpload}
+          className="hidden"
+          disabled={uploadState.isUploading}
+        />
+
         <PreviewImages 
-        selectedImage={state.uploadedImage}
-        onImageSelect={handlePreviewSelect}
-        fileInputRef={fileInputRef}
-        handleImageUpload={handleImageUpload}
+          selectedImage={state.uploadedImage}
+          onImageSelect={handlePreviewSelect}
+          fileInputRef={fileInputRef}
+          uploadState={uploadState}
         />
 
         <TextCustomizer 
@@ -207,7 +271,7 @@ function DesktopCustomizer({ state, setState, fileInputRef, handleImageUpload, h
             {COLORS.map((color) => (
               <button
                 key={color}
-                onClick={() => setState(prev => ({ ...prev, selectedColor: color }))}
+                onClick={() => updateCustomization(prev => ({ ...prev, selectedColor: color }))}
                 className={`w-12 h-12 rounded-full border-4 transition-all duration-200 hover:scale-110 ${
                   state.selectedColor === color 
                     ? 'border-gray-800 scale-110' 
@@ -229,12 +293,6 @@ function DesktopCustomizer({ state, setState, fileInputRef, handleImageUpload, h
             <Download size={20} />
             <span>디자인 다운로드</span>
           </button>
-          <button
-            className="w-full flex items-center justify-center space-x-2 py-3 px-6 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-400 text-white font-bold rounded-xl transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <ShoppingCart size={20} />
-            <span>장바구니에 담기</span>
-          </button>
         </div>
       </div>
     </div>
@@ -242,7 +300,7 @@ function DesktopCustomizer({ state, setState, fileInputRef, handleImageUpload, h
 }
 
 // Mobile layout with left drawer
-function MobileCustomizer({ state, setState, fileInputRef, handleImageUpload, handlePreviewSelect, handleTextChange, downloadDesign, isGenerating, compositeImage }) {
+function MobileCustomizer({ state, updateCustomization, uploadState, fileInputRef, handleImageUpload, handlePreviewSelect, handleTextChange, downloadDesign, isGenerating, compositeImage }) {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('images')
   
@@ -289,6 +347,31 @@ function MobileCustomizer({ state, setState, fileInputRef, handleImageUpload, ha
           </div>
         </div>
       </div>
+
+      {/* Upload Status Overlay */}
+      {uploadState.isUploading && (
+        <div className="absolute inset-0 bg-black/20 flex items-center justify-center z-50 pointer-events-auto">
+          <div className="bg-white rounded-lg p-6 shadow-xl max-w-sm mx-4">
+            <div className="flex items-center space-x-3">
+              <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+              <div>
+                <p className="font-medium text-gray-900">이미지 업로드 중...</p>
+                <p className="text-sm text-gray-600">잠시만 기다려주세요</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hidden file input for uploads */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleImageUpload}
+        className="hidden"
+        disabled={uploadState.isUploading}
+      />
 
       {/* Left Side Drawer */}
       <motion.div
@@ -337,10 +420,10 @@ function MobileCustomizer({ state, setState, fileInputRef, handleImageUpload, ha
             {activeTab === 'images' && (
               <div className="space-y-6">
                 <PreviewImages 
-                selectedImage={state.uploadedImage}
-                onImageSelect={handlePreviewSelect}
-                fileInputRef={fileInputRef}
-                handleImageUpload={handleImageUpload}
+                  selectedImage={state.uploadedImage}
+                  onImageSelect={handlePreviewSelect}
+                  fileInputRef={fileInputRef}
+                  uploadState={uploadState}
                 />
               </div>
             )}
@@ -367,7 +450,7 @@ function MobileCustomizer({ state, setState, fileInputRef, handleImageUpload, ha
                     {COLORS.map((color) => (
                       <button
                         key={color}
-                        onClick={() => setState(prev => ({ ...prev, selectedColor: color }))}
+                        onClick={() => updateCustomization(prev => ({ ...prev, selectedColor: color }))}
                         className={`w-12 h-12 rounded-full border-4 transition-all duration-200 hover:scale-110 ${
                           state.selectedColor === color 
                             ? 'border-gray-800 scale-110' 
@@ -393,13 +476,6 @@ function MobileCustomizer({ state, setState, fileInputRef, handleImageUpload, ha
             <Download size={20} />
             <span>디자인 다운로드</span>
           </button>
-          <button
-            className="w-full flex items-center justify-center space-x-2 py-3 px-6 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-400 text-white font-bold rounded-xl transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed mt-[1em]"
-          >
-            <ShoppingCart size={20} />
-            <span>장바구니에 담기</span>
-          </button>
-
         </div>
       </motion.div>
 
