@@ -1,13 +1,14 @@
 'use client'
 
-import React, { useState, useRef, Suspense } from 'react'
-import { Canvas, useFrame } from '@react-three/fiber'
-import { useGLTF, useTexture, AccumulativeShadows, RandomizedLight, Decal, Environment, Center } from '@react-three/drei'
+import React, { useState, useRef, Suspense, useEffect } from 'react'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { useGLTF, AccumulativeShadows, RandomizedLight, Environment, Center, Text } from '@react-three/drei'
 import { easing } from 'maath'
 import { motion, AnimatePresence } from 'framer-motion'
 import PreviewImages from '@/components/PreviewImages'
 import TextCustomizer from '@/components/TextCustomizer'
 import { useCompositeImage } from '@/components/ImageTextCompositor'
+import * as THREE from 'three'
 
 import { 
   Camera, 
@@ -101,11 +102,8 @@ export default function TShirtCustomizer() {
         <Canvas 
           shadows 
           camera={{ position: [0, 0, 2.5], fov: 25 }} 
-          gl={{ preserveDrawingBuffer: true,
-                antialias: false    // Fixed: was antialiasfalse
-              }}
+          gl={{ preserveDrawingBuffer: true, antialias: false }}
           style={{ background: 'linear-gradient(135deg, #fdf2f8 0%, #eff6ff 100%)' }}
-          
         >
           <ambientLight intensity={0.5 * Math.PI} />
           <Environment files="https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/potsdamer_platz_1k.hdr" />
@@ -115,7 +113,8 @@ export default function TShirtCustomizer() {
               <Center>
                 <Shirt 
                   color={state.selectedColor} 
-                  decalImage={compositeImage || state.uploadedImage} 
+                  decalImage={compositeImage || state.uploadedImage}
+                  textSettings={state.textSettings}
                 />
               </Center>
             </CameraRig>
@@ -453,7 +452,7 @@ function MobileCustomizer({ state, setState, fileInputRef, handleImageUpload, ha
   )
 }
 
-// 3D Components (unchanged)
+// 3D Components
 function Backdrop({ color }) {
   const shadows = useRef()
   useFrame((state, delta) => {
@@ -485,53 +484,176 @@ function CameraRig({ children, intro }) {
   useFrame((state, delta) => {
     easing.damp3(state.camera.position, [intro ? -state.viewport.width / 4 : 0, 0, 2], 0.25, delta)
     if (group.current) {
-      easing.dampE(group.current.rotation, [-state.pointer.y / 5, state.pointer.x / 3, 0], 0.25, delta)
+      easing.dampE(group.current.rotation, [
+        -state.pointer.y * 2,
+        state.pointer.x * 2,
+        0
+      ], 0.25, delta)
     }
   })
   
   return <group ref={group}>{children}</group>
 }
 
-function Shirt({ color, decalImage }) {
-  const { nodes, materials } = useGLTF('/shirt_baked_collapsed.glb')
+// Hook to load texture from image URL
+function useTexture(url) {
+  const [texture, setTexture] = useState(null)
+  
+  useEffect(() => {
+    if (url) {
+      const loader = new THREE.TextureLoader()
+      loader.load(url, setTexture)
+    } else {
+      setTexture(null)
+    }
+  }, [url])
+  
+  return texture
+}
+
+useGLTF.preload('/Untitled.glb')
+
+// Updated Shirt component with better decal positioning
+function Shirt({ color, decalImage, textSettings }) {
+  const gltf = useGLTF('/Untitled.glb')
+  const { nodes, materials } = gltf
+  const imageTexture = useTexture(decalImage)
   
   useFrame((state, delta) => {
-    if (materials?.lambert1?.color) {
-      easing.dampC(materials.lambert1.color, color, 0.25, delta)
+    const materialName = Object.keys(materials || {})[0]
+    if (materials?.[materialName]?.color) {
+      easing.dampC(materials[materialName].color, color, 0.25, delta)
     }
   })
   
+  const mainMeshName = Object.keys(nodes || {}).find(name => 
+    name !== 'Scene' && nodes[name]?.geometry
+  )
+  const mainMaterialName = Object.keys(materials || {})[0]
+  
+  if (!mainMeshName || !nodes[mainMeshName]?.geometry) {
+    return null
+  }
+  
   return (
-    <mesh 
-      castShadow 
-      geometry={nodes?.T_Shirt_male?.geometry} 
-      material={materials?.lambert1} 
-      material-roughness={1}
-      dispose={null}
-    >
-      {decalImage && (
-        <DecalTexture 
-          position={[0, 0.04, 0.15]} 
-          rotation={[0, 0, 0]} 
-          scale={0.25} 
-          imageUrl={decalImage}
+    <group rotation={[0,0,0]}>
+      {/* Main t-shirt mesh */}
+      <mesh 
+        castShadow 
+        geometry={nodes[mainMeshName].geometry} 
+        material={materials[mainMaterialName]}
+        material-roughness={1}
+      />
+      
+      {/* FIXED: Image decal with corrected positioning */}
+      {imageTexture && (
+        <SurfaceDecal 
+          texture={imageTexture}
+          position={[0, 0.04, 0.15]}
+          scale={0.25} // Reduced scale for better fit
+          rotation={[0, 0, 0]} // Reset rotation for decal
         />
       )}
+      
+      {/* FIXED: Text elements with corrected positioning */}
+      {textSettings.topText && (
+        <Text
+          position={[0, -0.05, 0.16]} // Adjusted for rotated coordinate system
+          fontSize={textSettings.fontSize === 'small' ? 0.025 : textSettings.fontSize === 'large' ? 0.055 : 0.04}
+          color={textSettings.textColor}
+          anchorX="center"
+          anchorY="middle"
+          font="https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ.woff"
+        >
+          {textSettings.topText}
+        </Text>
+      )}
+      
+      {textSettings.bottomText && (
+        <Text
+          position={[0, -0.35, 0.16]} // Moved relative to new coordinate system
+          fontSize={textSettings.fontSize === 'small' ? 0.025 : textSettings.fontSize === 'large' ? 0.055 : 0.04}
+          color={textSettings.textColor}
+          anchorX="center"
+          anchorY="middle"
+          font="https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ.woff"
+        >
+          {textSettings.bottomText}
+        </Text>
+      )}
+      
+      {textSettings.leftText && (
+        <Text
+          position={[-0.15, -0.2, 0.16]} // Adjusted for new positioning
+          fontSize={textSettings.fontSize === 'small' ? 0.025 : textSettings.fontSize === 'large' ? 0.055 : 0.04}
+          color={textSettings.textColor}
+          anchorX="center"
+          anchorY="middle"
+          font="https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ.woff"
+        >
+          {textSettings.leftText}
+        </Text>
+      )}
+      
+      {textSettings.rightText && (
+        <Text
+          position={[0.15, -0.2, 0.16]} // Adjusted for new positioning
+          fontSize={textSettings.fontSize === 'small' ? 0.025 : textSettings.fontSize === 'large' ? 0.055 : 0.04}
+          color={textSettings.textColor}
+          anchorX="center"
+          anchorY="middle"
+          font="https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ.woff"
+        >
+          {textSettings.rightText}
+        </Text>
+      )}
+    </group>
+  )
+}
+
+// Updated SurfaceDecal component with better material properties
+function SurfaceDecal({ texture, position, scale = 0.25, rotation = [0, 0, 0] }) {
+  if (!texture) return null
+  
+  return (
+    <mesh position={position} rotation={rotation}>
+      <planeGeometry args={[scale, scale]} />
+      <meshStandardMaterial 
+        map={texture} 
+        transparent 
+        alphaTest={0.1}
+        side={THREE.DoubleSide}
+        depthWrite={false}
+        polygonOffset={true}
+        polygonOffsetFactor={-4} // Increased to push further forward
+        polygonOffsetUnits={-4}
+        // Add these properties for better rendering
+        alphaMap={texture}
+        opacity={0.95}
+      />
     </mesh>
   )
 }
 
-function DecalTexture({ position, rotation, scale, imageUrl }) {
-  const texture = useTexture(imageUrl)
+// Alternative approach: Helper function to find the right position
+function findDecalPosition() {
+  // You can use this function to experiment with positioning
+  // Call it in your useEffect or useFrame to log different positions
   
-  return (
-    <Decal 
-      position={position} 
-      rotation={rotation} 
-      scale={scale} 
-      map={texture} 
-    />
-  )
+  return {
+    // Center front of t-shirt after rotation
+    center: [0, -0.2, 0.15],
+    
+    // Upper chest area
+    upperChest: [0, -0.05, 0.16],
+    
+    // Lower chest area  
+    lowerChest: [0, -0.35, 0.16],
+    
+    // Left side
+    leftSide: [-0.15, -0.2, 0.16],
+    
+    // Right side
+    rightSide: [0.15, -0.2, 0.16]
+  }
 }
-
-useGLTF.preload('/shirt_baked_collapsed.glb')
