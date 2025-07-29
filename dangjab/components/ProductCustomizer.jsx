@@ -7,9 +7,11 @@ import { useGLTF, useTexture, AccumulativeShadows, RandomizedLight, Decal, Envir
 import { easing } from 'maath'
 import { motion } from 'framer-motion'
 import PreviewImages from '@/components/PreviewImages'
-import TextCustomizer from '@/components/TextCustomizer'
-import { useCompositeImage } from '@/components/ImageTextCompositor'
 import { uploadImageToStorage } from '@/lib/supabaseStorage'
+import { writePsdBuffer } from 'ag-psd'
+import DesignPreviewPanel from '@/components/DesignPreviewPanel'
+import TextCustomizer from '@/components/TextCustomizer' 
+import { useCompositeImageWithElements } from '@/components/ImageTextCompositor'
 
 import { 
   Upload, 
@@ -38,6 +40,7 @@ const COLORS = [
 
 export default function ProductCustomizer({ product, customizationData, onCustomizationChange }) {
   const [state, setState] = useState(customizationData)
+  const [selectedTextId, setSelectedTextId] = useState(null)
   
   const [uploadState, setUploadState] = useState({
     isUploading: false,
@@ -60,7 +63,10 @@ export default function ProductCustomizer({ product, customizationData, onCustom
   };
 
   // Generate composite image with text overlay
-  const { compositeImage, isGenerating, CompositorComponent } = useCompositeImage(state.uploadedImage, state.textSettings)
+  const { compositeImage, isGenerating, CompositorComponent } = useCompositeImageWithElements(
+    state.uploadedImage, 
+    state.textSettings || {}
+  )
 
   const handleImageUpload = async (event) => {
     const file = event.target.files?.[0]
@@ -107,8 +113,28 @@ export default function ProductCustomizer({ product, customizationData, onCustom
     setUploadState(prev => ({ ...prev, uploadError: null }))
   }
 
-  const handleTextChange = (newTextSettings) => {
+  // NEW: Handlers for hybrid text system
+  const handleTextSettingsChange = (newTextSettings) => {
     updateCustomization(prev => ({ ...prev, textSettings: newTextSettings }))
+  }
+
+  const handleAddCustomText = () => {
+    const newElement = {
+      id: `custom-${Date.now()}`,
+      text: '새 텍스트',
+      x: 700, // Center of 1400px canvas
+      y: 700,
+      fontSize: state.textSettings?.fontSize || 'medium',
+      color: state.textSettings?.textColor || '#8B4513',
+      fontFamily: state.textSettings?.fontFamily || 'Arial, sans-serif'
+    }
+    
+    const updatedSettings = {
+      ...state.textSettings,
+      customElements: [...(state.textSettings?.customElements || []), newElement]
+    }
+    handleTextSettingsChange(updatedSettings)
+    setSelectedTextId(newElement.id)
   }
 
   const downloadDesign = () => {
@@ -121,13 +147,199 @@ export default function ProductCustomizer({ product, customizationData, onCustom
     }
   }
 
+  // PSD Helper Functions - Updated for hybrid text system
+  const createImageLayer = (imageUrl, canvasWidth, canvasHeight) => {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas')
+      canvas.width = canvasWidth
+      canvas.height = canvasHeight
+      const ctx = canvas.getContext('2d')
+      
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      img.onload = () => {
+        const x = 300  // Fixed position
+        const y = 300  // Fixed position  
+        const drawWidth = 800   // Fixed size
+        const drawHeight = 800  // Fixed size
+        
+        ctx.drawImage(img, x, y, drawWidth, drawHeight)
+        resolve(canvas)
+      }
+      img.onerror = () => reject(new Error('Failed to load image'))
+      img.src = imageUrl
+    })
+  }
+
+  const createTextLayers = async (textSettings, canvasWidth, canvasHeight) => {
+    const layers = []
+    
+    if (!textSettings) return layers
+
+    // Font size mapping
+    const fontSizeMap = { small: 18, medium: 24, large: 30, xl: 36 }
+    
+    // Traditional text positions (with custom overrides)
+    const getTraditionalTextPositions = () => {
+      const defaults = {
+        topText: { x: 700, y: 200 },
+        bottomText: { x: 700, y: 1200 },
+        leftText: { x: 100, y: 700 },
+        rightText: { x: 1300, y: 700 }
+      }
+      
+      return {
+        ...defaults,
+        ...textSettings.textPositions
+      }
+    }
+
+    const traditionalPositions = getTraditionalTextPositions()
+
+    // Create layers for traditional text
+    for (const textKey of ['topText', 'bottomText', 'leftText', 'rightText']) {
+      const text = textSettings[textKey]
+      if (!text || !text.trim()) continue
+
+      const canvas = document.createElement('canvas')
+      canvas.width = canvasWidth
+      canvas.height = canvasHeight
+      const ctx = canvas.getContext('2d')
+      
+      const position = traditionalPositions[textKey]
+      const fontSize = fontSizeMap[textSettings.fontSize] || 24
+      
+      ctx.font = `bold ${fontSize}px ${textSettings.fontFamily || 'Arial'}`
+      ctx.fillStyle = textSettings.textColor || '#8B4513'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      
+      // Add white stroke for visibility
+      ctx.strokeStyle = '#ffffff'
+      ctx.lineWidth = 3
+      ctx.strokeText(text.toUpperCase(), position.x, position.y)
+      ctx.fillText(text.toUpperCase(), position.x, position.y)
+      
+      layers.push({
+        name: `${textKey.replace('Text', '').toUpperCase()} Text`,
+        canvas: canvas,
+        opacity: 255,
+        blendMode: 'normal'
+      })
+    }
+
+    // Create layers for custom text elements
+    if (textSettings.customElements) {
+      for (const element of textSettings.customElements) {
+        const canvas = document.createElement('canvas')
+        canvas.width = canvasWidth
+        canvas.height = canvasHeight
+        const ctx = canvas.getContext('2d')
+        
+        const fontSize = fontSizeMap[element.fontSize] || 24
+        
+        ctx.font = `bold ${fontSize}px ${element.fontFamily || 'Arial'}`
+        ctx.fillStyle = element.color
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        
+        // Add white stroke for visibility
+        ctx.strokeStyle = '#ffffff'
+        ctx.lineWidth = 3
+        ctx.strokeText(element.text, element.x, element.y)
+        ctx.fillText(element.text, element.x, element.y)
+        
+        layers.push({
+          name: `Custom - ${element.text.substring(0, 10)}`,
+          canvas: canvas,
+          opacity: 255,
+          blendMode: 'normal'
+        })
+      }
+    }
+    
+    return layers
+  }
+
+  const downloadAsPSD = async () => {
+    try {
+      console.log('🎨 Starting PSD export...')
+      setUploadState(prev => ({ ...prev, isUploading: true }))
+      
+      const canvasWidth = 1400
+      const canvasHeight = 1400
+      const layers = []
+      
+      // Background layer (transparent)
+      const bgCanvas = document.createElement('canvas')
+      bgCanvas.width = canvasWidth
+      bgCanvas.height = canvasHeight
+      const bgCtx = bgCanvas.getContext('2d')
+      bgCtx.clearRect(0, 0, canvasWidth, canvasHeight)
+      
+      layers.push({
+        name: 'Background',
+        canvas: bgCanvas,
+        opacity: 255,
+        blendMode: 'normal'
+      })
+      
+      // Image layer (if exists)
+      if (state.uploadedImage) {
+        console.log('📷 Adding image layer...')
+        const imageCanvas = await createImageLayer(state.uploadedImage, canvasWidth, canvasHeight)
+        layers.push({
+          name: 'Design Image',
+          canvas: imageCanvas,
+          opacity: 255,
+          blendMode: 'normal'
+        })
+      }
+      
+      // Text layers - UPDATED to use hybrid textSettings
+      console.log('📝 Adding text layers...')
+      const textLayers = await createTextLayers(state.textSettings, canvasWidth, canvasHeight)
+      layers.push(...textLayers)
+      
+      console.log(`✅ Created ${layers.length} layers`)
+      
+      // Create PSD structure
+      const psd = {
+        width: canvasWidth,
+        height: canvasHeight,
+        channels: 4,
+        bitsPerChannel: 8,
+        colorMode: 3,
+        children: layers.reverse()
+      }
+      
+      console.log('🔄 Generating PSD buffer...')
+      const buffer = writePsdBuffer(psd)
+      
+      // Download file
+      const blob = new Blob([buffer], { type: 'application/octet-stream' })
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(blob)
+      link.download = `design-${Date.now()}.psd`
+      link.click()
+      
+      console.log('✅ PSD exported successfully!')
+      
+    } catch (error) {
+      console.error('❌ PSD export failed:', error)
+      alert('PSD 내보내기에 실패했습니다. 다시 시도해주세요.')
+    } finally {
+      setUploadState(prev => ({ ...prev, isUploading: false }))
+    }
+  }
+
   return (
     <section className="relative w-full h-[80svh] md:h-[80svh] bg-gray-50">
       {/* 3D Canvas Background */}
       <div 
-        className="absolute inset-0 w-full lg:w-[70%] h-full"
+        className="absolute inset-0 w-full lg:w-[40%] h-full"
         style={{
-          backgroundImage: 'url(/images/grass-background.jpg)', // Add your grass image to public folder
+          backgroundImage: 'url(/images/grass-background.jpg)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat'
@@ -165,8 +377,14 @@ export default function ProductCustomizer({ product, customizationData, onCustom
           fileInputRef={fileInputRef}
           handleImageUpload={handleImageUpload}
           handlePreviewSelect={handlePreviewSelect}
-          handleTextChange={handleTextChange}
+          // NEW: Pass hybrid text props
+          textSettings={state.textSettings || {}}
+          onTextSettingsChange={handleTextSettingsChange}
+          onAddCustomText={handleAddCustomText}
+          selectedTextId={selectedTextId}
+          onSelectText={setSelectedTextId}
           downloadDesign={downloadDesign}
+          downloadAsPSD={downloadAsPSD}
           isGenerating={isGenerating}
           compositeImage={compositeImage}
         />
@@ -192,15 +410,33 @@ function ResponsiveCustomizer(props) {
   )
 }
 
-// Desktop layout
-function DesktopCustomizer({ state, updateCustomization, uploadState, fileInputRef, handleImageUpload, handlePreviewSelect, handleTextChange, downloadDesign, isGenerating, compositeImage }) {
-  const hasTextContent = state.textSettings.topText || state.textSettings.bottomText || 
-                        state.textSettings.leftText || state.textSettings.rightText
+// Desktop layout - UPDATED for 3-column layout with DesignPreviewPanel
+function DesktopCustomizer({ 
+  state, 
+  updateCustomization, 
+  uploadState, 
+  fileInputRef, 
+  handleImageUpload, 
+  handlePreviewSelect,
+  textSettings,
+  onTextSettingsChange,
+  onAddCustomText,
+  selectedTextId,
+  onSelectText,
+  downloadDesign, 
+  downloadAsPSD,
+  isGenerating, 
+  compositeImage 
+}) {
+  const hasContent = state.uploadedImage || 
+                    textSettings?.topText || textSettings?.bottomText || 
+                    textSettings?.leftText || textSettings?.rightText ||
+                    (textSettings?.customElements && textSettings.customElements.length > 0)
 
   return (
     <div className="w-full h-full flex">
-      {/* Left area - 3D Preview (70%) */}
-      <div className="flex-[0.7] relative">
+      {/* Left area - 3D Preview (40%) */}
+      <div className="flex-[0.4] relative">
         {/* Disclaimer - Top Left */}
         <div className="absolute top-6 left-6 z-50 pointer-events-auto">
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 shadow-sm max-w-xs">
@@ -223,13 +459,27 @@ function DesktopCustomizer({ state, updateCustomization, uploadState, fileInputR
               <div className="flex items-center space-x-3">
                 <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
                 <div>
-                  <p className="font-medium text-gray-900">이미지 업로드 중...</p>
+                  <p className="font-medium text-gray-900">
+                    {uploadState.isUploading ? '처리 중...' : '이미지 업로드 중...'}
+                  </p>
                   <p className="text-sm text-gray-600">잠시만 기다려주세요</p>
                 </div>
               </div>
             </div>
           </div>
         )}
+      </div>
+
+      {/* Middle - Design Preview Panel (30%) */}
+      <div className="flex-[0.3] p-4 overflow-y-auto pointer-events-auto">
+        <DesignPreviewPanel
+          imageUrl={state.uploadedImage}
+          textSettings={textSettings}
+          onTextSettingsChange={onTextSettingsChange}
+          onAddCustomText={onAddCustomText}
+          selectedTextId={selectedTextId}
+          onSelectText={onSelectText}
+        />
       </div>
 
       {/* Right Panel - Controls (30%) */}
@@ -256,8 +506,10 @@ function DesktopCustomizer({ state, updateCustomization, uploadState, fileInputR
         />
 
         <TextCustomizer 
-          textSettings={state.textSettings}
-          onTextChange={handleTextChange}
+          textSettings={textSettings}
+          onTextSettingsChange={onTextSettingsChange}
+          selectedTextId={selectedTextId}
+          onSelectText={onSelectText}
         />
 
         {/* Color Selection */}
@@ -285,31 +537,65 @@ function DesktopCustomizer({ state, updateCustomization, uploadState, fileInputR
 
         {/* Action Buttons */}
         <div className="space-y-3">
-          <button
-            onClick={downloadDesign}
-            disabled={!state.uploadedImage}
-            className="w-full flex items-center justify-center space-x-2 py-3 px-6 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-400 text-white font-bold rounded-xl transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Download size={20} />
-            <span>디자인 다운로드</span>
-          </button>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={downloadDesign}
+              disabled={!hasContent}
+              className="flex items-center justify-center space-x-2 py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-bold rounded-xl transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Download size={18} />
+              <span>PNG</span>
+            </button>
+            
+            <button
+              onClick={downloadAsPSD}
+              disabled={!hasContent}
+              className="flex items-center justify-center space-x-2 py-3 px-4 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white font-bold rounded-xl transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span className="text-sm">🎨</span>
+              <span>PSD</span>
+            </button>
+          </div>
+          
+          <p className="text-xs text-gray-600 text-center">
+            PNG: 최종 이미지 • PSD: 포토샵 편집용 레이어
+          </p>
         </div>
       </div>
     </div>
   )
 }
 
-// Mobile layout with left drawer
-function MobileCustomizer({ state, updateCustomization, uploadState, fileInputRef, handleImageUpload, handlePreviewSelect, handleTextChange, downloadDesign, isGenerating, compositeImage }) {
+// Mobile layout - UPDATED with new props
+function MobileCustomizer({ 
+  state, 
+  updateCustomization, 
+  uploadState, 
+  fileInputRef, 
+  handleImageUpload, 
+  handlePreviewSelect,
+  textSettings,
+  onTextSettingsChange,
+  onAddCustomText,
+  selectedTextId,
+  onSelectText,
+  downloadDesign, 
+  downloadAsPSD,
+  isGenerating, 
+  compositeImage 
+}) {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('images')
   
-  const hasTextContent = state.textSettings.topText || state.textSettings.bottomText || 
-                        state.textSettings.leftText || state.textSettings.rightText
+  const hasContent = state.uploadedImage || 
+                    textSettings?.topText || textSettings?.bottomText || 
+                    textSettings?.leftText || textSettings?.rightText ||
+                    (textSettings?.customElements && textSettings.customElements.length > 0)
 
   const tabs = [
     { id: 'images', label: '이미지', icon: Upload },
     { id: 'text', label: '텍스트', icon: Menu },
+    { id: 'preview', label: '미리보기', icon: Info },
     { id: 'colors', label: '색상', icon: Palette },
   ]
 
@@ -355,7 +641,7 @@ function MobileCustomizer({ state, updateCustomization, uploadState, fileInputRe
             <div className="flex items-center space-x-3">
               <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
               <div>
-                <p className="font-medium text-gray-900">이미지 업로드 중...</p>
+                <p className="font-medium text-gray-900">처리 중...</p>
                 <p className="text-sm text-gray-600">잠시만 기다려주세요</p>
               </div>
             </div>
@@ -393,21 +679,21 @@ function MobileCustomizer({ state, updateCustomization, uploadState, fileInputRe
           </div>
           
           {/* Tab Navigation */}
-          <div className="flex bg-gray-100 rounded-lg p-1">
+          <div className="grid grid-cols-2 gap-1 bg-gray-100 rounded-lg p-1">
             {tabs.map((tab) => {
               const Icon = tab.icon
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex-1 flex items-center justify-center space-x-2 py-2 px-3 rounded-md transition-all duration-200 ${
+                  className={`flex items-center justify-center space-x-1 py-2 px-2 rounded-md transition-all duration-200 ${
                     activeTab === tab.id
                       ? 'bg-white shadow-sm text-gray-900'
                       : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
-                  <Icon size={16} />
-                  <span className="text-sm font-medium">{tab.label}</span>
+                  <Icon size={14} />
+                  <span className="text-xs font-medium">{tab.label}</span>
                 </button>
               )
             })}
@@ -431,8 +717,23 @@ function MobileCustomizer({ state, updateCustomization, uploadState, fileInputRe
             {activeTab === 'text' && (
               <div className="space-y-6">
                 <TextCustomizer 
-                  textSettings={state.textSettings}
-                  onTextChange={handleTextChange}
+                  textSettings={textSettings}
+                  onTextSettingsChange={onTextSettingsChange}
+                  selectedTextId={selectedTextId}
+                  onSelectText={onSelectText}
+                />
+              </div>
+            )}
+
+            {activeTab === 'preview' && (
+              <div className="space-y-6">
+                <DesignPreviewPanel
+                  imageUrl={state.uploadedImage}
+                  textSettings={textSettings}
+                  onTextSettingsChange={onTextSettingsChange}
+                  onAddCustomText={onAddCustomText}
+                  selectedTextId={selectedTextId}
+                  onSelectText={onSelectText}
                 />
               </div>
             )}
@@ -466,16 +767,31 @@ function MobileCustomizer({ state, updateCustomization, uploadState, fileInputRe
           </div>
         </div>
 
-        {/* Bottom Action Button */}
-        <div className="p-6 border-t border-gray-200">
-          <button
-            onClick={downloadDesign}
-            disabled={!state.uploadedImage}
-            className="w-full flex items-center justify-center space-x-2 py-3 px-6 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-400 text-white font-bold rounded-xl transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Download size={20} />
-            <span>디자인 다운로드</span>
-          </button>
+        {/* Bottom Action Buttons */}
+        <div className="p-6 border-t border-gray-200 space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={downloadDesign}
+              disabled={!hasContent}
+              className="flex items-center justify-center space-x-2 py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-bold rounded-xl transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Download size={18} />
+              <span>PNG</span>
+            </button>
+            
+            <button
+              onClick={downloadAsPSD}
+              disabled={!hasContent}
+              className="flex items-center justify-center space-x-2 py-3 px-4 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white font-bold rounded-xl transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span className="text-sm">🎨</span>
+              <span>PSD</span>
+            </button>
+          </div>
+          
+          <p className="text-xs text-gray-600 text-center">
+            PNG: 최종 이미지 • PSD: 포토샵 편집용 레이어
+          </p>
         </div>
       </motion.div>
 
@@ -504,7 +820,7 @@ function TransparentBackdrop() {
       resolution={2048}
       rotation={[Math.PI / 2, 0, 0]}
       position={[0, 0, -0.14]}
-      opacity={0.2} // Adjust shadow opacity as needed (0.6 = 60% opacity)
+      opacity={0.2}
     >
       <RandomizedLight amount={4} radius={9} intensity={0.55 * Math.PI} ambient={0.25} position={[5, 5, -10]} />
       <RandomizedLight amount={4} radius={5} intensity={0.25 * Math.PI} ambient={0.55} position={[-5, 5, -9]} />

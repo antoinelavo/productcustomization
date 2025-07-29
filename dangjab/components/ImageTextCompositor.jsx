@@ -1,17 +1,22 @@
-// Much simpler approach using CSS positioning + html2canvas for export
-// npm install html2canvas
+// @/components/ImageTextCompositor.jsx - Updated for hybrid approach
+'use client'
 
 import React, { useRef, useEffect, useState } from 'react'
 import html2canvas from 'html2canvas'
 
-// Hook for generating composite image using CSS approach
-export function useCSSCompositeImage(imageUrl, textSettings) {
+// Hook for generating composite image using the hybrid text structure
+export function useCompositeImage(imageUrl, textSettings) {
   const [compositeImage, setCompositeImage] = useState(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const containerRef = useRef()
 
   useEffect(() => {
-    if (!imageUrl) {
+    const hasImage = imageUrl
+    const hasTraditionalText = textSettings?.topText || textSettings?.bottomText || 
+                              textSettings?.leftText || textSettings?.rightText
+    const hasCustomText = textSettings?.customElements && textSettings.customElements.length > 0
+    
+    if (!hasImage && !hasTraditionalText && !hasCustomText) {
       setCompositeImage(null)
       return
     }
@@ -24,7 +29,7 @@ export function useCSSCompositeImage(imageUrl, textSettings) {
         try {
           const canvas = await html2canvas(containerRef.current, {
             backgroundColor: null,
-            scale: 1, // Higher quality
+            scale: 1,
             useCORS: true,
             allowTaint: false
           })
@@ -33,7 +38,7 @@ export function useCSSCompositeImage(imageUrl, textSettings) {
           setCompositeImage(dataURL)
         } catch (error) {
           console.error('Failed to generate composite image:', error)
-          setCompositeImage(imageUrl) // Fallback to original image
+          setCompositeImage(imageUrl || null)
         }
       }
       setIsGenerating(false)
@@ -45,18 +50,35 @@ export function useCSSCompositeImage(imageUrl, textSettings) {
   return { compositeImage, isGenerating, containerRef }
 }
 
-// CSS-based compositor component
+// Updated CSS-based compositor component for hybrid approach
 function CSSImageCompositor({ imageUrl, textSettings, containerRef }) {
-  // Font size mapping
-  const fontSizeMap = {
-    small: '18px',
-    medium: '24px', 
-    large: '30px',
-    xl: '36px'
+  
+  const getFontSize = (size) => {
+    const fontSizeMap = {
+      small: '18px',
+      medium: '24px', 
+      large: '30px',
+      xl: '36px'
+    }
+    return fontSizeMap[size] || '24px'
   }
 
-  const baseFontSize = fontSizeMap[textSettings.fontSize] || '24px'
-  const textColor = textSettings.textColor || '#8B4513'
+  // Get traditional text positions (with fallbacks)
+  const getTraditionalTextPositions = () => {
+    const defaults = {
+      topText: { x: 700, y: 200 },
+      bottomText: { x: 700, y: 1200 },
+      leftText: { x: 100, y: 700 },
+      rightText: { x: 1300, y: 700 }
+    }
+    
+    return {
+      ...defaults,
+      ...textSettings?.textPositions
+    }
+  }
+
+  const traditionalPositions = getTraditionalTextPositions()
 
   return (
     <div
@@ -70,115 +92,81 @@ function CSSImageCompositor({ imageUrl, textSettings, containerRef }) {
         fontWeight: 'bold'
       }}
     >
-      {/* Top Text - Behind Image */}
-      {textSettings.topText && (
-        <div
-          style={{
-            position: 'absolute',
-            top: '-70px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            fontSize: `calc(${baseFontSize} * 13)`,
-            color: textColor,
-            fontWeight: 'bold',
-            textAlign: 'center',
-            zIndex: 1, // Behind image
-            whiteSpace: 'nowrap'
-          }}
-        >
-          {textSettings.topText.toUpperCase()}
-        </div>
-      )}
-
-      {/* Dog Image - On Top with Fixed 1:1 Ratio */}
+      {/* Background Image - Fixed position and size */}
       {imageUrl && (
         <img
           src={imageUrl}
-          alt="Dog"
+          alt="Design"
           style={{
             position: 'absolute',
             top: '300px',
-            left: '300px', // Centered: (512 - 300) / 2 = 106
+            left: '300px',
             width: '800px',
-            height: '800px', // Fixed 1:1 square ratio
-            objectFit: 'cover', // Fills the square, may crop edges
-            zIndex: 10 // High z-index to ensure it's on top of ALL text
+            height: '800px',
+            objectFit: 'cover',
+            zIndex: 10 // High z-index to ensure it's on top of text
           }}
           crossOrigin="anonymous"
         />
       )}
 
-      {/* Left Text - Rotated, Behind Image */}
-      {textSettings.leftText && (
-        <div
-          style={{
-            position: 'absolute',
-            left: '20px',
-            top: '50%',
-            fontSize: `calc(${baseFontSize} * 2)`,
-            color: textColor,
-            fontWeight: 'bold',
-            whiteSpace: 'nowrap',
-            zIndex: 1 // Behind image
-          }}
-        >
-          {textSettings.leftText}
-        </div>
-      )}
+      {/* Traditional Text Elements */}
+      {['topText', 'bottomText', 'leftText', 'rightText'].map((textKey) => {
+        const text = textSettings?.[textKey]
+        if (!text || !text.trim()) return null
+        
+        const position = traditionalPositions[textKey]
+        
+        return (
+          <div
+            key={textKey}
+            style={{
+              position: 'absolute',
+              left: position.x,
+              top: position.y,
+              fontSize: getFontSize(textSettings?.fontSize),
+              color: textSettings?.textColor || '#8B4513',
+              fontWeight: 'bold',
+              fontFamily: textSettings?.fontFamily || 'Arial, sans-serif',
+              whiteSpace: 'nowrap',
+              zIndex: 1, // Behind image
+              transform: 'translate(-50%, -50%)', // Center text on coordinates
+              textShadow: '2px 2px 4px rgba(255,255,255,0.8)' // White outline for visibility
+            }}
+          >
+            {text.toUpperCase()}
+          </div>
+        )
+      })}
 
-      {/* Right Text - Rotated, Behind Image */}
-      {textSettings.rightText && (
+      {/* Custom Text Elements */}
+      {textSettings?.customElements?.map((element) => (
         <div
+          key={element.id}
           style={{
             position: 'absolute',
-            right: '20px',
-            top: '50%',
-            fontSize: `calc(${baseFontSize} * 2)`,
-            color: textColor,
+            left: element.x,
+            top: element.y,
+            fontSize: getFontSize(element.fontSize),
+            color: element.color,
             fontWeight: 'bold',
+            fontFamily: element.fontFamily || 'Arial, sans-serif',
             whiteSpace: 'nowrap',
-            zIndex: 1 // Behind image
-          }}
-        >
-          {textSettings.rightText}
-        </div>
-      )}
-
-      {/* Bottom Text - Behind Image */}
-      {textSettings.bottomText && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: '17%',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            fontSize: `calc(${baseFontSize} * 2)`,
-            color: textColor,
-            fontWeight: 'bold',
-            textAlign: 'center',
             zIndex: 1, // Behind image
-            whiteSpace: 'nowrap'
+            transform: 'translate(-50%, -50%)', // Center text on coordinates
+            textShadow: '2px 2px 4px rgba(255,255,255,0.8)' // White outline for visibility
           }}
         >
-          {textSettings.bottomText}
+          {element.text}
         </div>
-      )}
+      ))}
     </div>
   )
 }
 
-// Alternative: Simple implementation without html2canvas (if you want to avoid dependencies)
-export function createSimpleCompositeImage(imageUrl, textSettings) {
-  return new Promise((resolve) => {
-    // For now, just return the original image
-    // This is a fallback if html2canvas doesn't work
-    resolve(imageUrl)
-  })
-}
-
 // Drop-in replacement for your current hook
-export function useCompositeImage(imageUrl, textSettings) {
-  const { compositeImage, isGenerating, containerRef } = useCSSCompositeImage(imageUrl, textSettings)
+export function useCompositeImageWithElements(imageUrl, textSettings) {
+  const { compositeImage, isGenerating, containerRef } = useCompositeImage(imageUrl, textSettings)
   
   return {
     compositeImage,
