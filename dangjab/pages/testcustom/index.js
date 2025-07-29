@@ -23,7 +23,11 @@ export default function TshirtDesignPage() {
         textAlign: 'center',
         letterSpacing: 0,
         lineHeight: 1,
-        rotation: 0
+        rotation: 0,
+        isCurved: true,
+        curveRadius: 30,
+        curveDirection: 'up',
+        locked: false
       },
       {
         id: 'leftdate',
@@ -186,7 +190,8 @@ export function TshirtDesignPageWithOption() {
         textAlign: 'center',
         letterSpacing: 0,
         lineHeight: 1,
-        rotation: 0
+        rotation: 0,
+        
       }
     ],
     backgroundImage: null

@@ -78,7 +78,7 @@ export default function ImagePanel({ onImageUpload }) {
       <div className="flex-1 overflow-y-auto">
         <div className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-gray-700">스톡 이미지</h3>
+            <h3 className="text-sm font-medium text-gray-700">예시 사진</h3>
             <button className="p-2 hover:bg-gray-100 rounded-lg">
               <Search size={16} className="text-gray-400" />
             </button>

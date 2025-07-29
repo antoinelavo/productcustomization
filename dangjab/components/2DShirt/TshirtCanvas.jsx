@@ -2,7 +2,8 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
-import { Trash2, RotateCw } from 'lucide-react'
+import { Trash2, RotateCw, Lock } from 'lucide-react'
+import CurvedText from '@/components/2DShirt/CurvedText'
 
 const CANVAS_SIZE = {
   width: 500,
@@ -40,6 +41,53 @@ export default function TshirtCanvas({
 
   // Calculate blue selection box bounds for text using accurate text measurement
   const getTextSelectionBounds = (element) => {
+    // Handle curved text differently
+    if (element.isCurved) {
+      const curveRadius = element.curveRadius || 100
+      
+      // Calculate more precise curved text bounds
+      let textWidth, textHeight
+      
+      if (typeof document !== 'undefined') {
+        // Create a canvas for text measurement
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
+        
+        // Set font properties to match the text element
+        ctx.font = `${element.fontStyle} ${element.fontWeight} ${element.fontSize}px ${element.fontFamily}`
+        
+        // Measure the actual text width
+        const textMetrics = ctx.measureText(element.text)
+        textWidth = textMetrics.width
+        textHeight = element.fontSize
+      } else {
+        // Fallback for SSR - use estimation
+        const charWidth = element.fontSize * 0.6
+        textWidth = element.text.length * charWidth
+        textHeight = element.fontSize
+      }
+      
+      // For curved text, create tighter bounds based on actual arc
+      // The arc width is roughly the text width, height includes the curve
+      const arcHeight = curveRadius * 0.3 // Much smaller than before
+      const effectiveWidth = textWidth  // Cap the width
+      const effectiveHeight = textHeight
+      
+      const padding = 8
+      const boxWidth = effectiveWidth
+      const boxHeight = effectiveHeight
+      
+      return {
+        width: boxWidth,
+        height: boxHeight,
+        left: element.x - boxWidth / 2,
+        right: element.x + boxWidth / 2,
+        top: element.y - boxHeight / 2,
+        bottom: element.y + boxHeight / 2
+      }
+    }
+
+    // Regular text measurement
     let textWidth, textHeight
     
     // Check if we're in browser environment (not SSR)
@@ -93,10 +141,27 @@ export default function TshirtCanvas({
     }
   }
 
+  // Check if element is locked
+  const isElementLocked = (elementId, elementType) => {
+    if (elementType === ELEMENT_TYPES.TEXT) {
+      const element = textElements.find(el => el.id === elementId)
+      return element?.locked === true  // Only locked if explicitly set to true
+    } else {
+      const element = imageElements.find(el => el.id === elementId)
+      return element?.locked === true  // Only locked if explicitly set to true
+    }
+  }
+
   // Handle mouse down for dragging
   const handleMouseDown = (e, elementId, elementType) => {
     e.preventDefault()
     e.stopPropagation()
+    
+    // Don't allow dragging of locked elements
+    if (isElementLocked(elementId, elementType)) {
+      onElementSelect(elementId, elementType)
+      return
+    }
     
     const element = elementType === ELEMENT_TYPES.TEXT 
       ? textElements.find(el => el.id === elementId)
@@ -124,6 +189,11 @@ export default function TshirtCanvas({
   const handleResizeMouseDown = (e, elementId, elementType, corner) => {
     e.preventDefault()
     e.stopPropagation()
+    
+    // Don't allow resizing of locked elements
+    if (isElementLocked(elementId, elementType)) {
+      return
+    }
     
     const element = elementType === ELEMENT_TYPES.TEXT 
       ? textElements.find(el => el.id === elementId)
@@ -161,6 +231,11 @@ export default function TshirtCanvas({
   const handleRotateMouseDown = (e, elementId, elementType) => {
     e.preventDefault()
     e.stopPropagation()
+    
+    // Don't allow rotation of locked elements
+    if (isElementLocked(elementId, elementType)) {
+      return
+    }
     
     const element = elementType === ELEMENT_TYPES.TEXT 
       ? textElements.find(el => el.id === elementId)
@@ -323,11 +398,13 @@ export default function TshirtCanvas({
     letterSpacing: `${element.letterSpacing}px`,
     lineHeight: element.lineHeight,
     transform: `translate(-50%, -50%) rotate(${element.rotation}deg)`,
-    cursor: isEditingMode ? 'move' : 'pointer',
+    cursor: isEditingMode && !element.locked ? 'move' : element.locked ? 'not-allowed' : 'pointer',
     userSelect: 'none',
     whiteSpace: 'nowrap',
     zIndex: selectedElementId === element.id && selectedElementType === ELEMENT_TYPES.TEXT ? 8 : 3,
-    textShadow: '1px 1px 2px rgba(0,0,0,0.1)'
+    textShadow: '1px 1px 2px rgba(0,0,0,0.1)',
+    // Add visual indicator for locked elements
+    opacity: element.locked ? 0.8 : 1
   })
 
   // Image style helper
@@ -338,10 +415,12 @@ export default function TshirtCanvas({
     width: element.width,
     height: element.height,
     transform: `translate(-50%, -50%) rotate(${element.rotation}deg)`,
-    cursor: isEditingMode ? 'move' : 'pointer',
+    cursor: isEditingMode && !element.locked ? 'move' : element.locked ? 'not-allowed' : 'pointer',
     userSelect: 'none',
     zIndex: selectedElementId === element.id && selectedElementType === ELEMENT_TYPES.IMAGE ? 10 : 5,
-    objectFit: 'contain'
+    objectFit: 'contain',
+    // Add visual indicator for locked elements
+    opacity: element.locked ? 0.8 : 1
   })
 
   return (
@@ -353,7 +432,7 @@ export default function TshirtCanvas({
         style={{ 
           width: CANVAS_SIZE.width, 
           height: CANVAS_SIZE.height,
-          background: 'white'
+          background: 'transparent'
         }}
         onClick={handleCanvasClick}
       >
@@ -386,6 +465,7 @@ export default function TshirtCanvas({
         {/* Image Elements */}
         {imageElements.map((element) => {
           const isSelected = selectedElementId === element.id && selectedElementType === ELEMENT_TYPES.IMAGE
+          const isLocked = element.locked || false
           const selectionBounds = getImageSelectionBounds(element)
           
           return (
@@ -400,8 +480,23 @@ export default function TshirtCanvas({
                 className={`${isSelected ? 'ring-2 ring-blue-500' : ''}`}
               />
 
-              {/* Editing Handles - Only show when selected and in editing mode */}
-              {isSelected && isEditingMode && (
+              {/* Lock indicator for locked elements */}
+              {/* {isLocked && (
+                <div
+                  className="absolute w-5 h-5 bg-amber-500 text-white rounded-full flex items-center justify-center"
+                  style={{
+                    left: selectionBounds.left - 5,
+                    top: selectionBounds.bottom + 5,
+                    zIndex: 15
+                  }}
+                  title="템플릿 요소 (수정 불가)"
+                >
+                  <Lock size={10} />
+                </div>
+              )} */}
+
+              {/* Editing Handles - Only show when selected, in editing mode, and NOT locked */}
+              {isSelected && isEditingMode && !isLocked && (
                 <>
                   {/* Corner Handles */}
                   <div
@@ -485,22 +580,49 @@ export default function TshirtCanvas({
         {/* Text Elements */}
         {textElements.map((element) => {
           const isSelected = selectedElementId === element.id && selectedElementType === ELEMENT_TYPES.TEXT
+          const isLocked = element.locked || false
           const selectionBounds = getTextSelectionBounds(element)
           
           return (
             <div key={element.id} style={{ position: 'relative' }} data-element-type="text">
-              {/* Text Element */}
+              {/* Text Element - Use CurvedText component */}
               <div
-                style={getTextStyle(element)}
                 onMouseDown={(e) => handleMouseDown(e, element.id, ELEMENT_TYPES.TEXT)}
                 onDoubleClick={() => handleDoubleClick(element.id, ELEMENT_TYPES.TEXT)}
-                className={`${isSelected ? 'ring-2 ring-blue-500' : ''}`}
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  width: '100%',
+                  height: '100%',
+                  cursor: isEditingMode && !element.locked ? 'move' : element.locked ? 'not-allowed' : 'pointer',
+                  zIndex: selectedElementId === element.id && selectedElementType === ELEMENT_TYPES.TEXT ? 8 : 3,
+                }}
               >
-                {element.text}
+                <CurvedText
+                  element={element}
+                  isSelected={isSelected}
+                  className={`${isSelected ? 'ring-2 ring-blue-500' : ''} ${isLocked ? 'ring-2 ring-amber-400' : ''}`}
+                />
               </div>
 
-              {/* Editing Handles - Only show when selected and in editing mode */}
-              {isSelected && isEditingMode && (
+              {/* Lock indicator for locked elements */}
+              {isLocked && (
+                <div
+                  className="absolute w-5 h-5 bg-amber-500 text-white rounded-full flex items-center justify-center"
+                  style={{
+                    left: selectionBounds.left - 5,
+                    top: selectionBounds.bottom + 5,
+                    zIndex: 15
+                  }}
+                  title="템플릿 요소 (수정 불가)"
+                >
+                  <Lock size={10} />
+                </div>
+              )}
+
+              {/* Editing Handles - Only show when selected, in editing mode, and NOT locked */}
+              {isSelected && isEditingMode && !isLocked && (
                 <>
                   {/* Corner Handles */}
                   <div
@@ -587,6 +709,7 @@ export default function TshirtCanvas({
         <p>텍스트나 이미지를 클릭하여 선택하고 드래그하여 이동하세요</p>
         <p>모서리 핸들: 중앙으로 드래그하면 작게, 바깥으로 드래그하면 크게</p>
         <p>빈 영역 클릭 또는 ESC 키로 선택 해제</p>
+        <p className="text-amber-600 mt-1">🔒 잠긴 템플릿 요소는 수정할 수 없습니다</p>
       </div>
     </div>
   )

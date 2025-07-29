@@ -1,123 +1,195 @@
 // @/components/2DShirt/TemplatePanel.jsx
 'use client'
 
-import React from 'react'
-import { Layers, Star, Heart } from 'lucide-react'
+import React, { useState } from 'react'
+import { AlertTriangle, X, Check } from 'lucide-react'
 
-const TEMPLATE_CATEGORIES = [
-  { id: 'popular', name: '인기 템플릿', icon: Star },
-  { id: 'new', name: '신규 템플릿', icon: Layers },
-  { id: 'favorite', name: '즐겨찾기', icon: Heart }
-]
-
-const SAMPLE_TEMPLATES = [
-  {
-    id: 1,
-    name: '심플 텍스트',
-    category: 'popular',
-    thumbnail: '',
+// Mock template data that would normally come from PSD files
+const TEMPLATES = {
+  travel: {
+    id: 'travel',
+    name: '여행',
     textElements: [
-      { id: 'temp-1', text: '심플한 텍스트', x: 250, y: 200, fontSize: 28, color: '#000000', fontFamily: '나눔 고딕' }
+      {
+        id: 'travel-name',
+        text: 'RUNGJI',
+        x: 250,
+        y: 180,
+        fontSize: 32,
+        fontFamily: 'Arial',
+        color: '#00b7ffff',
+        fontWeight: 'bold',
+        fontStyle: 'normal',
+        textDecoration: 'none',
+        textAlign: 'center',
+        letterSpacing: 2,
+        lineHeight: 1,
+        rotation: 0,
+        isCurved: true,
+        curveRadius: 30,
+        curveDirection: 'up',
+        locked: false
+      }
+    ],
+    imageElements: [
+      {
+        id: 'travel-bg',
+        src: '/templates/travel.png',
+        x: 250,
+        y: 230,
+        width: 200,
+        height: 125,
+        rotation: 0,
+        locked: true
+      }
     ]
   },
-  {
-    id: 2,
-    name: '상하 조합',
-    category: 'popular',
-    thumbnail: '',
+  summer: {
+    id: 'summer',
+    name: '여름',
     textElements: [
-      { id: 'temp-2', text: '상단 텍스트', x: 250, y: 180, fontSize: 24, color: '#000000', fontFamily: '나눔 명조' },
-      { id: 'temp-3', text: '하단 텍스트', x: 250, y: 320, fontSize: 20, color: '#666666', fontFamily: '나눔 명조' }
-    ]
-  },
-  {
-    id: 3,
-    name: '컬러풀',
-    category: 'new',
-    thumbnail: '',
-    textElements: [
-      { id: 'temp-4', text: 'COLORFUL', x: 250, y: 200, fontSize: 32, color: '#ff6b6b', fontFamily: 'Arial', fontWeight: 'bold' }
+      {
+        id: 'summer-name',
+        text: 'DDUNGJA',
+        x: 250,
+        y: 180,
+        fontSize: 32,
+        fontFamily: 'Arial',
+        color: '#00b7ffff',
+        fontWeight: 'bold',
+        fontStyle: 'normal',
+        textDecoration: 'none',
+        textAlign: 'center',
+        letterSpacing: 2,
+        lineHeight: 1,
+        rotation: 0,
+        isCurved: true,
+        curveRadius: 30,
+        curveDirection: 'up',
+        locked: false
+      }
+    ],
+    imageElements: [
+      {
+        id: 'summer-bg',
+        src: '/templates/summer.png',
+        x: 250,
+        y: 230,
+        width: 200,
+        height: 125,
+        rotation: 0,
+        locked: true
+      }
     ]
   }
-]
+}
 
-export function TemplatePanel({ onSelectTemplate }) {
-  const [selectedCategory, setSelectedCategory] = React.useState('popular')
-  
-  const filteredTemplates = SAMPLE_TEMPLATES.filter(template => 
-    template.category === selectedCategory
-  )
+export default function TemplatePanel({ onSelectTemplate }) {
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [selectedTemplate, setSelectedTemplate] = useState(null)
+
+  const handleTemplateClick = (template) => {
+    setSelectedTemplate(template)
+    setShowConfirmDialog(true)
+  }
+
+  const handleConfirmApply = () => {
+    if (selectedTemplate && onSelectTemplate) {
+      onSelectTemplate(selectedTemplate)
+    }
+    setShowConfirmDialog(false)
+    setSelectedTemplate(null)
+  }
+
+  const handleCancelApply = () => {
+    setShowConfirmDialog(false)
+    setSelectedTemplate(null)
+  }
 
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="p-6 border-b border-gray-200">
-        <h2 className="text-lg font-semibold">템플릿</h2>
-        <p className="text-sm text-gray-600 mt-1">미리 만들어진 디자인을 선택하세요</p>
+        <h2 className="text-xl font-semibold text-gray-800">시안 선택</h2>
       </div>
 
-      {/* Categories */}
-      <div className="px-6 py-4 border-b border-gray-200">
-        <div className="flex space-x-1">
-          {TEMPLATE_CATEGORIES.map((category) => {
-            const Icon = category.icon
-            return (
-              <button
-                key={category.id}
-                onClick={() => setSelectedCategory(category.id)}
-                className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  selectedCategory === category.id
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
-                }`}
-              >
-                <Icon size={16} />
-                <span>{category.name}</span>
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Templates Grid */}
-      <div className="flex-1 p-6 overflow-y-auto">
-        <div className="grid grid-cols-2 gap-4">
-          {filteredTemplates.map((template) => (
+      {/* Template List */}
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="space-y-3">
+          {Object.values(TEMPLATES).map((template) => (
             <button
               key={template.id}
-              onClick={() => onSelectTemplate(template)}
-              className="aspect-square border-2 border-gray-200 rounded-lg p-3 hover:border-blue-300 transition-colors group"
+              onClick={() => handleTemplateClick(template)}
+              className="w-full p-4 text-left border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors group"
             >
-              <div className="w-full h-full bg-gray-50 rounded flex items-center justify-center relative overflow-hidden">
-                {/* Template Preview */}
-                <div className="text-xs text-center">
-                  {template.textElements.map((text, idx) => (
-                    <div 
-                      key={idx}
-                      className="mb-1"
-                      style={{ 
-                        color: text.color, 
-                        fontFamily: text.fontFamily,
-                        fontWeight: text.fontWeight 
-                      }}
-                    >
-                      {text.text}
-                    </div>
-                  ))}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-medium text-gray-800 group-hover:text-blue-700">
+                    {template.name}
+                  </h3>
                 </div>
-                
-                {/* Overlay */}
-                <div className="absolute inset-0 bg-blue-600 bg-opacity-0 group-hover:bg-opacity-10 transition-all flex items-center justify-center">
-                  <span className="text-blue-600 opacity-0 group-hover:opacity-100 text-sm font-medium">
-                    선택
-                  </span>
+                <div className="text-gray-400 group-hover:text-blue-500">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                  </svg>
                 </div>
               </div>
-              <p className="text-xs text-gray-600 mt-2 text-center">{template.name}</p>
             </button>
           ))}
         </div>
+
+        {/* Info Box */}
+        <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="flex items-start space-x-3">
+            <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+            <div className="text-sm">
+              <p className="text-amber-800 font-medium">템플릿 정보</p>
+              <p className="text-amber-700 mt-1">
+                • 템플릿을 선택하면 현재 디자인이 모두 교체됩니다<br/>
+                • 템플릿 요소는 글 이외 수정할 수 없습니다<br/>
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* Confirmation Dialog */}
+      {showConfirmDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-mx-4 mx-4">
+            <div className="p-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <AlertTriangle className="w-6 h-6 text-amber-500" />
+                <h3 className="text-lg font-semibold text-gray-800">
+                  템플릿 적용 확인
+                </h3>
+              </div>
+              
+              <p className="text-gray-600 mb-6">
+                "<strong>{selectedTemplate?.name}</strong>" 템플릿을 적용하시겠습니까?<br/>
+                현재 디자인된 모든 요소가 교체됩니다.
+              </p>
+
+              <div className="flex space-x-3">
+                <button
+                  onClick={handleCancelApply}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center space-x-2"
+                >
+                  <X size={16} />
+                  <span>취소</span>
+                </button>
+                <button
+                  onClick={handleConfirmApply}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
+                >
+                  <Check size={16} />
+                  <span>적용</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -15,7 +15,8 @@ import {
   ChevronDown,
   ChevronUp,
   RotateCw,
-  Link
+  Link,
+  Waves
 } from 'lucide-react'
 
 const FONT_FAMILIES = [
@@ -87,6 +88,16 @@ export default function TextEditingPanel({
     onUpdate({ [property]: parseFloat(value) || 0 })
   }
 
+  // Handle curve toggle
+  const handleCurveToggle = () => {
+    const newCurvedState = !textElement.isCurved
+    onUpdate({ 
+      isCurved: newCurvedState,
+      curveRadius: newCurvedState ? 30 : undefined,
+      curveDirection: newCurvedState ? 'up' : undefined
+    })
+  }
+
   const isActive = (property, value) => textElement[property] === value
 
   return (
@@ -128,10 +139,76 @@ export default function TextEditingPanel({
           />
         </div>
 
+        {/* Curve Controls */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center space-x-2">
+              <Waves className="w-4 h-4 text-blue-600" />
+              <label className="text-sm font-medium text-gray-700">
+                글자 구부리기
+              </label>
+            </div>
+            <button
+              onClick={handleCurveToggle}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                textElement.isCurved
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+              }`}
+            >
+              {textElement.isCurved ? 'ON' : 'OFF'}
+            </button>
+          </div>
+
+          {textElement.isCurved && (
+            <div className="space-y-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <div>
+                <label className="block text-xs text-gray-600 mb-2">
+                  곡선 강도: {textElement.curveRadius}
+                </label>
+                <input
+                  type="range"
+                  min="1"
+                  max="70"
+                  value={textElement.curveRadius || 50}
+                  onChange={(e) => onUpdate({ curveRadius: parseInt(e.target.value) })}
+                  className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-xs text-gray-600 mb-2">곡선 방향</label>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => onUpdate({ curveDirection: 'up' })}
+                    className={`flex-1 px-3 py-2 text-xs rounded transition-colors ${
+                      (textElement.curveDirection || 'up') === 'up'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    위로 ⌒
+                  </button>
+                  <button
+                    onClick={() => onUpdate({ curveDirection: 'down' })}
+                    className={`flex-1 px-3 py-2 text-xs rounded transition-colors ${
+                      textElement.curveDirection === 'down'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    아래로 ⌄
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Font Selection */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            서체 선택
+            글꼴 선택
           </label>
           <div className="relative">
             <button

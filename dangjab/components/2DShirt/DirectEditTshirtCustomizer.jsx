@@ -177,7 +177,7 @@ export default function DirectEditTshirtCustomizer({
     },
     { 
       type: PANEL_TYPES.TEXT, 
-      icon: Edit3, 
+      icon: Type, 
       label: '텍스트 편집',
       isActive: activePanel === PANEL_TYPES.TEXT 
     },
@@ -197,37 +197,6 @@ export default function DirectEditTshirtCustomizer({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={onBack}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <ArrowLeft size={20} />
-            </button>
-            <h1 className="text-xl font-semibold">T-shirt 커스터마이징</h1>
-          </div>
-          
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={addTextElement}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <Type size={18} />
-              <span>텍스트 추가</span>
-            </button>
-            
-            <button
-              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            >
-              <Download size={18} />
-              <span>다운로드</span>
-            </button>
-          </div>
-        </div>
-      </div>
 
       {/* Main Content */}
       <div className="flex max-w-7xl mx-auto min-h-screen">
@@ -250,7 +219,7 @@ export default function DirectEditTshirtCustomizer({
         {/* Right Panel Controls */}
         <div className="flex">
           {/* Panel Selection Buttons */}
-          <div className="w-16 bg-white border-l border-gray-200 flex flex-col items-center py-6 space-y-4">
+          <div className="w-16 flex flex-col items-center py-6 space-y-4">
             {panelButtons.map((button) => {
               const Icon = button.icon
               return (
@@ -260,7 +229,7 @@ export default function DirectEditTshirtCustomizer({
                   className={`w-12 h-12 rounded-full flex items-center justify-center transition-all hover:scale-110 ${
                     button.isActive 
                       ? 'bg-blue-600 text-white shadow-lg' 
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      : 'bg-gray-200 text-gray-600 hover:bg-gray-200'
                   }`}
                   title={button.label}
                 >
@@ -361,10 +330,6 @@ export default function DirectEditTshirtCustomizer({
                   transition={{ duration: 0.2 }}
                 >
                   <DesignPanel
-                    onSelectDesign={(design) => {
-                      // Handle design selection
-                      console.log('Selected design:', design)
-                    }}
                   />
                 </motion.div>
               )}
