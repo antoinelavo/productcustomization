@@ -19,9 +19,9 @@ import {
 } from 'lucide-react'
 
 const FONT_FAMILIES = [
+  { value: 'Arial', label: 'Arial' },
   { value: '나눔 명조', label: '나눔 명조' },
   { value: '나눔 고딕', label: '나눔 고딕' },
-  { value: 'Arial', label: 'Arial' },
   { value: 'Helvetica', label: 'Helvetica' },
   { value: 'Times New Roman', label: 'Times New Roman' },
   { value: 'Georgia', label: 'Georgia' },
@@ -162,7 +162,7 @@ export default function TextEditingPanel({
         </div>
 
         {/* Font Size */}
-        <div>
+        {/* <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             글자 크기
           </label>
@@ -191,10 +191,10 @@ export default function TextEditingPanel({
               </div>
             )}
           </div>
-        </div>
+        </div> */}
 
         {/* Text Formatting */}
-        <div>
+        {/* <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             텍스트 서식
           </label>
@@ -247,10 +247,10 @@ export default function TextEditingPanel({
               <Strikethrough size={16} />
             </button>
           </div>
-        </div>
+        </div> */}
 
         {/* Text Alignment */}
-        <div>
+        {/* <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             텍스트 정렬
           </label>
@@ -288,12 +288,12 @@ export default function TextEditingPanel({
               <AlignRight size={16} className="mx-auto" />
             </button>
           </div>
-        </div>
+        </div> */}
 
         {/* Colors */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            글씨 색상 - 노랑
+            글씨 색상
           </label>
           <div className="space-y-2">
             {TEXT_COLORS.map((row, rowIndex) => (
@@ -317,7 +317,7 @@ export default function TextEditingPanel({
         </div>
 
         {/* Character & Line Spacing */}
-        <div className="grid grid-cols-2 gap-4">
+        {/* <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               문자 간격
@@ -370,10 +370,10 @@ export default function TextEditingPanel({
               </button>
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Rotation */}
-        <div>
+        {/* <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             회전
           </label>
@@ -398,10 +398,10 @@ export default function TextEditingPanel({
               <ChevronUp size={16} />
             </button>
           </div>
-        </div>
+        </div> */}
 
         {/* Pattern */}
-        <div>
+        {/* <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             패턴
           </label>
@@ -443,7 +443,7 @@ export default function TextEditingPanel({
               </button>
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   )

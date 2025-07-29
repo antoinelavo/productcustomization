@@ -10,10 +10,10 @@ export default function TshirtDesignPage() {
     tshirtColor: '#ffffff',
     textElements: [
       {
-        id: `text-${Date.now()}`,
-        text: '텍스트를 편집하세요',
+        id: 'toptext',
+        text: 'BBOSIK',
         x: 250,
-        y: 200,
+        y: 175,
         fontSize: 32,
         fontFamily: 'Arial',
         color: '#c09031ff',
@@ -24,8 +24,68 @@ export default function TshirtDesignPage() {
         letterSpacing: 0,
         lineHeight: 1,
         rotation: 0
-      }
+      },
+      {
+        id: 'leftdate',
+        text: '2025.05.31',
+        x: 150,
+        y: 250,
+        fontSize: 8,
+        fontFamily: 'Arial',
+        color: '#c09031ff',
+        fontWeight: 'bold',
+        fontStyle: 'normal',
+        textDecoration: 'none',
+        textAlign: 'center',
+        letterSpacing: 0,
+        lineHeight: 1,
+        rotation: 0
+      },
+            {
+        id: 'rightdate',
+        text: '2021.04.31',
+        x: 350,
+        y: 250,
+        fontSize: 8,
+        fontFamily: 'Arial',
+        color: '#c09031ff',
+        fontWeight: 'bold',
+        fontStyle: 'normal',
+        textDecoration: 'none',
+        textAlign: 'center',
+        letterSpacing: 0,
+        lineHeight: 1,
+        rotation: 0
+      },
+                  {
+        id: 'bottomtext',
+        text: 'The reasons why I live',
+        x: 250,
+        y: 325,
+        fontSize: 8,
+        fontFamily: 'Arial',
+        color: '#c09031ff',
+        fontWeight: 'bold',
+        fontStyle: 'normal',
+        textDecoration: 'none',
+        textAlign: 'center',
+        letterSpacing: 0,
+        lineHeight: 1,
+        rotation: 0
+      },
+      
     ],
+    imageElements: [ // Add this array
+    {
+      id: 'defaultdog',
+      src: '/dogs/golden_retriever.png', // Path to your image
+      x: 250, // Position
+      y: 250,
+      width: 150, // Size
+      height: 150,
+      rotation: 0
+    }
+  ],
     backgroundImage: null
   }
 
@@ -114,7 +174,7 @@ export function TshirtDesignPageWithOption() {
     textElements: [
       {
         id: `text-${Date.now()}`,
-        text: '텍스트를 편집하세요',
+        text: 'BBOSIK',
         x: 250,
         y: 200,
         fontSize: 32,

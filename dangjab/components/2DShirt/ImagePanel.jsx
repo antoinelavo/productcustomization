@@ -4,6 +4,24 @@
 import React, { useRef } from 'react'
 import { Upload, Image, Search } from 'lucide-react'
 
+const STOCK_IMAGES = [
+  {
+    id: 1,
+    src: '/dogs/golden_retriever.png',
+    alt: '골든 리트리버'
+  },
+  {
+    id: 2,
+    src: '/dogs/husky.png',
+    alt: '허스키'
+  },
+  {
+    id: 3,
+    src: '/dogs/pomeranian.png',
+    alt: '포메라니안'
+  }
+]
+
 export default function ImagePanel({ onImageUpload }) {
   const fileInputRef = useRef(null)
 
@@ -67,14 +85,17 @@ export default function ImagePanel({ onImageUpload }) {
           </div>
           
           <div className="grid grid-cols-2 gap-3">
-            {/* Placeholder stock images */}
-            {Array.from({ length: 6 }).map((_, idx) => (
+            {STOCK_IMAGES.map((stockImage) => (
               <button
-                key={idx}
-                onClick={() => handleStockImageSelect(`https://via.placeholder.com/150x150?text=Image${idx+1}`)}
-                className="aspect-square bg-gray-100 rounded-lg border border-gray-200 hover:border-blue-300 transition-colors flex items-center justify-center"
+                key={stockImage.id}
+                onClick={() => handleStockImageSelect(stockImage.src)}
+                className="aspect-square bg-gray-100 rounded-lg border border-gray-200 hover:border-blue-300 transition-colors overflow-hidden"
               >
-                <Image size={24} className="text-gray-400" />
+                <img
+                  src={stockImage.src}
+                  alt={stockImage.alt}
+                  className="w-full h-full object-cover"
+                />
               </button>
             ))}
           </div>

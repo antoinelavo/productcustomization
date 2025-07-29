@@ -19,15 +19,21 @@ const PANEL_TYPES = {
   DESIGN: 'design'
 }
 
+const ELEMENT_TYPES = {
+  TEXT: 'text',
+  IMAGE: 'image'
+}
+
 export default function DirectEditTshirtCustomizer({ 
   onBack, 
   initialData = {}, 
   onSave 
 }) {
   const [textElements, setTextElements] = useState(initialData.textElements || [])
+  const [imageElements, setImageElements] = useState(initialData.imageElements || [])
   const [selectedElementId, setSelectedElementId] = useState(null)
+  const [selectedElementType, setSelectedElementType] = useState(null) // 'text' or 'image'
   const [activePanel, setActivePanel] = useState(PANEL_TYPES.DEFAULT)
-  const [backgroundImage, setBackgroundImage] = useState(initialData.backgroundImage || null)
   
   // Product options state
   const [selectedSize, setSelectedSize] = useState('M')
@@ -36,7 +42,8 @@ export default function DirectEditTshirtCustomizer({
   const fileInputRef = useRef(null)
   
   // Get selected text element
-  const selectedElement = textElements.find(el => el.id === selectedElementId)
+  const selectedTextElement = textElements.find(el => el.id === selectedElementId && selectedElementType === ELEMENT_TYPES.TEXT)
+  const selectedImageElement = imageElements.find(el => el.id === selectedElementId && selectedElementType === ELEMENT_TYPES.IMAGE)
 
   // Add new text element
   const addTextElement = () => {
@@ -46,7 +53,7 @@ export default function DirectEditTshirtCustomizer({
       x: 250, // Center of 500px canvas
       y: 200,
       fontSize: 24,
-      fontFamily: '나눔 명조',
+      fontFamily: 'Arial',
       color: '#000000',
       fontWeight: 'normal',
       fontStyle: 'normal',
@@ -59,7 +66,26 @@ export default function DirectEditTshirtCustomizer({
     
     setTextElements(prev => [...prev, newElement])
     setSelectedElementId(newElement.id)
+    setSelectedElementType(ELEMENT_TYPES.TEXT)
     setActivePanel(PANEL_TYPES.TEXT)
+  }
+
+  // Add new image element
+  const addImageElement = (imageSrc) => {
+    const newElement = {
+      id: `image-${Date.now()}`,
+      src: imageSrc,
+      x: 250, // Center of canvas
+      y: 200,
+      width: 120, // Default size
+      height: 120,
+      rotation: 0
+    }
+    
+    setImageElements(prev => [...prev, newElement])
+    setSelectedElementId(newElement.id)
+    setSelectedElementType(ELEMENT_TYPES.IMAGE)
+    setActivePanel(PANEL_TYPES.DEFAULT) // Go back to default panel after adding image
   }
 
   // Update text element
@@ -69,40 +95,54 @@ export default function DirectEditTshirtCustomizer({
     )
   }
 
+  // Update image element
+  const updateImageElement = (id, updates) => {
+    setImageElements(prev => 
+      prev.map(el => el.id === id ? { ...el, ...updates } : el)
+    )
+  }
+
   // Delete text element
   const deleteTextElement = (id) => {
     setTextElements(prev => prev.filter(el => el.id !== id))
-    if (selectedElementId === id) {
+    if (selectedElementId === id && selectedElementType === ELEMENT_TYPES.TEXT) {
       setSelectedElementId(null)
+      setSelectedElementType(null)
       setActivePanel(PANEL_TYPES.DEFAULT)
     }
   }
 
-  // Handle text selection
-  const handleTextSelect = (id) => {
+  // Delete image element
+  const deleteImageElement = (id) => {
+    setImageElements(prev => prev.filter(el => el.id !== id))
+    if (selectedElementId === id && selectedElementType === ELEMENT_TYPES.IMAGE) {
+      setSelectedElementId(null)
+      setSelectedElementType(null)
+      setActivePanel(PANEL_TYPES.DEFAULT)
+    }
+  }
+
+  // Handle element selection (unified for text and images)
+  const handleElementSelect = (id, type) => {
     setSelectedElementId(id)
-    if (id && activePanel !== PANEL_TYPES.TEXT) {
+    setSelectedElementType(type)
+    
+    // Auto-switch to text panel if text is selected
+    if (id && type === ELEMENT_TYPES.TEXT && activePanel !== PANEL_TYPES.TEXT) {
       setActivePanel(PANEL_TYPES.TEXT)
     }
   }
 
-  // Handle image upload
-  const handleImageUpload = (event) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        setBackgroundImage(e.target.result)
-      }
-      reader.readAsDataURL(file)
-    }
+  // Handle image upload (creates a new image element)
+  const handleImageUpload = (imageSrc) => {
+    addImageElement(imageSrc)
   }
 
   // Handle panel button clicks
   const handlePanelClick = (panelType) => {
     if (panelType === PANEL_TYPES.TEXT) {
       // If clicking text panel but no text selected, add new text
-      if (!selectedElement) {
+      if (!selectedTextElement) {
         addTextElement()
       } else {
         setActivePanel(panelType)
@@ -116,7 +156,7 @@ export default function DirectEditTshirtCustomizer({
   const handleAddToCart = () => {
     const orderData = {
       textElements,
-      backgroundImage,
+      imageElements,
       selectedSize,
       quantity,
       timestamp: new Date().toISOString()
@@ -195,11 +235,14 @@ export default function DirectEditTshirtCustomizer({
         <div className="flex-1 p-8 flex justify-center items-center">
           <TshirtCanvas
             textElements={textElements}
+            imageElements={imageElements}
             selectedElementId={selectedElementId}
-            backgroundImage={backgroundImage}
-            onTextSelect={handleTextSelect}
+            selectedElementType={selectedElementType}
+            onElementSelect={handleElementSelect}
             onTextUpdate={updateTextElement}
+            onImageUpdate={updateImageElement}
             onTextDelete={deleteTextElement}
+            onImageDelete={deleteImageElement}
             isEditingMode={true}
           />
         </div>
@@ -259,7 +302,7 @@ export default function DirectEditTshirtCustomizer({
                   <TemplatePanel 
                     onSelectTemplate={(template) => {
                       setTextElements(template.textElements || [])
-                      setBackgroundImage(template.backgroundImage || null)
+                      setImageElements(template.imageElements || [])
                     }}
                   />
                 </motion.div>
@@ -273,12 +316,12 @@ export default function DirectEditTshirtCustomizer({
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.2 }}
                 >
-                  {selectedElement ? (
+                  {selectedTextElement ? (
                     <TextEditingPanel
-                      textElement={selectedElement}
-                      onUpdate={(updates) => updateTextElement(selectedElement.id, updates)}
+                      textElement={selectedTextElement}
+                      onUpdate={(updates) => updateTextElement(selectedTextElement.id, updates)}
                       onClose={() => setActivePanel(PANEL_TYPES.DEFAULT)}
-                      onDelete={() => deleteTextElement(selectedElement.id)}
+                      onDelete={() => deleteTextElement(selectedTextElement.id)}
                     />
                   ) : (
                     <div className="p-6 text-center">
@@ -304,9 +347,7 @@ export default function DirectEditTshirtCustomizer({
                   transition={{ duration: 0.2 }}
                 >
                   <ImagePanel
-                    onImageUpload={(imageData) => {
-                      setBackgroundImage(imageData)
-                    }}
+                    onImageUpload={handleImageUpload}
                   />
                 </motion.div>
               )}

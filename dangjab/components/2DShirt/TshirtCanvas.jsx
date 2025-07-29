@@ -16,13 +16,21 @@ const DESIGN_AREA = {
   height: 300  // Design area height
 }
 
+const ELEMENT_TYPES = {
+  TEXT: 'text',
+  IMAGE: 'image'
+}
+
 export default function TshirtCanvas({
   textElements,
+  imageElements,
   selectedElementId,
-  backgroundImage,
-  onTextSelect,
+  selectedElementType,
+  onElementSelect,
   onTextUpdate,
+  onImageUpdate,
   onTextDelete,
+  onImageDelete,
   isEditingMode
 }) {
   const [dragState, setDragState] = useState(null)
@@ -30,37 +38,70 @@ export default function TshirtCanvas({
   const [rotateState, setRotateState] = useState(null)
   const canvasRef = useRef(null)
 
-  // Calculate blue selection box bounds (includes padding around text)
-    const getSelectionBounds = (element) => {
-    const textLength = element.text.length
-    const fontSize = element.fontSize
+  // Calculate blue selection box bounds for text using accurate text measurement
+  const getTextSelectionBounds = (element) => {
+    let textWidth, textHeight
     
-    // Estimate text dimensions with padding for the blue selection box
-    const charWidth = fontSize * 0.8 // Fixed and increased from 0.6 to 0.8
-    const textWidth = Math.max(textLength * charWidth, fontSize) // Minimum width = font size
-    const textHeight = fontSize // Increased from 1.2 to 1.4 for better coverage
+    // Check if we're in browser environment (not SSR)
+    if (typeof document !== 'undefined') {
+      // Create a canvas for text measurement
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      
+      // Set font properties to match the text element
+      ctx.font = `${element.fontStyle} ${element.fontWeight} ${element.fontSize}px ${element.fontFamily}`
+      
+      // Measure the actual text width
+      const textMetrics = ctx.measureText(element.text)
+      textWidth = textMetrics.width
+      textHeight = element.fontSize
+    } else {
+      // Fallback for SSR - use estimation
+      const charWidth = element.fontSize * 0.8
+      textWidth = Math.max(element.text.length * charWidth, element.fontSize)
+      textHeight = element.fontSize
+    }
     
-    // Add some padding to ensure full text coverage
-    const padding = 0
-    const boxWidth = textWidth
-    const boxHeight = textHeight
+    // Add small padding for better visual appearance
+    const padding = 4
+    const boxWidth = textWidth + padding * 2
+    const boxHeight = textHeight + padding * 2
     
     return {
-        width: boxWidth,
-        height: boxHeight,
-        left: element.x - boxWidth / 2,
-        right: element.x + boxWidth / 2,
-        top: element.y - boxHeight / 2,
-        bottom: element.y + boxHeight / 2
+      width: boxWidth,
+      height: boxHeight,
+      left: element.x - boxWidth / 2,
+      right: element.x + boxWidth / 2,
+      top: element.y - boxHeight / 2,
+      bottom: element.y + boxHeight / 2
     }
-    }
+  }
 
-  // Handle mouse down for dragging text
-  const handleMouseDown = (e, elementId) => {
+  // Calculate selection bounds for images
+  const getImageSelectionBounds = (element) => {
+    const padding = 4
+    const boxWidth = element.width + padding * 2
+    const boxHeight = element.height + padding * 2
+    
+    return {
+      width: boxWidth,
+      height: boxHeight,
+      left: element.x - boxWidth / 2,
+      right: element.x + boxWidth / 2,
+      top: element.y - boxHeight / 2,
+      bottom: element.y + boxHeight / 2
+    }
+  }
+
+  // Handle mouse down for dragging
+  const handleMouseDown = (e, elementId, elementType) => {
     e.preventDefault()
     e.stopPropagation()
     
-    const element = textElements.find(el => el.id === elementId)
+    const element = elementType === ELEMENT_TYPES.TEXT 
+      ? textElements.find(el => el.id === elementId)
+      : imageElements.find(el => el.id === elementId)
+    
     if (!element) return
 
     const rect = canvasRef.current.getBoundingClientRect()
@@ -69,21 +110,25 @@ export default function TshirtCanvas({
 
     setDragState({
       elementId,
+      elementType,
       startX,
       startY,
       offsetX: startX - element.x,
       offsetY: startY - element.y
     })
 
-    onTextSelect(elementId)
+    onElementSelect(elementId, elementType)
   }
 
   // Handle mouse down for resizing (corner handles)
-  const handleResizeMouseDown = (e, elementId, corner) => {
+  const handleResizeMouseDown = (e, elementId, elementType, corner) => {
     e.preventDefault()
     e.stopPropagation()
     
-    const element = textElements.find(el => el.id === elementId)
+    const element = elementType === ELEMENT_TYPES.TEXT 
+      ? textElements.find(el => el.id === elementId)
+      : imageElements.find(el => el.id === elementId)
+    
     if (!element) return
 
     const rect = canvasRef.current.getBoundingClientRect()
@@ -97,24 +142,30 @@ export default function TshirtCanvas({
 
     setResizeState({
       elementId,
+      elementType,
       corner,
       startX,
       startY,
-      startFontSize: element.fontSize,
+      startFontSize: elementType === ELEMENT_TYPES.TEXT ? element.fontSize : null,
+      startWidth: elementType === ELEMENT_TYPES.IMAGE ? element.width : null,
+      startHeight: elementType === ELEMENT_TYPES.IMAGE ? element.height : null,
       centerX: element.x,
       centerY: element.y,
       initialDistance
     })
 
-    onTextSelect(elementId)
+    onElementSelect(elementId, elementType)
   }
 
   // Handle mouse down for rotation
-  const handleRotateMouseDown = (e, elementId) => {
+  const handleRotateMouseDown = (e, elementId, elementType) => {
     e.preventDefault()
     e.stopPropagation()
     
-    const element = textElements.find(el => el.id === elementId)
+    const element = elementType === ELEMENT_TYPES.TEXT 
+      ? textElements.find(el => el.id === elementId)
+      : imageElements.find(el => el.id === elementId)
+    
     if (!element) return
 
     const rect = canvasRef.current.getBoundingClientRect()
@@ -126,22 +177,23 @@ export default function TshirtCanvas({
 
     setRotateState({
       elementId,
+      elementType,
       centerX: element.x,
       centerY: element.y,
       initialAngle,
       startRotation: element.rotation || 0
     })
 
-    onTextSelect(elementId)
+    onElementSelect(elementId, elementType)
   }
 
-  // Handle mouse move for dragging
+  // Handle mouse move for dragging, resizing, and rotating
   const handleMouseMove = (e) => {
     const rect = canvasRef.current.getBoundingClientRect()
     const currentX = e.clientX - rect.left
     const currentY = e.clientY - rect.top
 
-    // Handle text dragging
+    // Handle dragging
     if (dragState) {
       const newX = currentX - dragState.offsetX
       const newY = currentY - dragState.offsetY
@@ -152,10 +204,17 @@ export default function TshirtCanvas({
       const constrainedY = Math.max(DESIGN_AREA.y,
         Math.min(newY, DESIGN_AREA.y + DESIGN_AREA.height))
 
-      onTextUpdate(dragState.elementId, {
-        x: constrainedX,
-        y: constrainedY
-      })
+      if (dragState.elementType === ELEMENT_TYPES.TEXT) {
+        onTextUpdate(dragState.elementId, {
+          x: constrainedX,
+          y: constrainedY
+        })
+      } else {
+        onImageUpdate(dragState.elementId, {
+          x: constrainedX,
+          y: constrainedY
+        })
+      }
     }
 
     // Handle resizing
@@ -166,16 +225,22 @@ export default function TshirtCanvas({
       )
       
       // Determine scale factor based on direction
-      // If current distance > initial distance = moving away from center = larger
-      // If current distance < initial distance = moving towards center = smaller
       const distanceRatio = currentDistance / resizeState.initialDistance
       const scaleFactor = Math.max(0.3, Math.min(3, distanceRatio)) // Constrain between 30% and 300%
       
-      const newFontSize = Math.max(8, Math.min(72, resizeState.startFontSize * scaleFactor))
-      
-      onTextUpdate(resizeState.elementId, {
-        fontSize: newFontSize
-      })
+      if (resizeState.elementType === ELEMENT_TYPES.TEXT) {
+        const newFontSize = Math.max(8, Math.min(72, resizeState.startFontSize * scaleFactor))
+        onTextUpdate(resizeState.elementId, {
+          fontSize: newFontSize
+        })
+      } else {
+        const newWidth = Math.max(20, Math.min(200, resizeState.startWidth * scaleFactor))
+        const newHeight = Math.max(20, Math.min(200, resizeState.startHeight * scaleFactor))
+        onImageUpdate(resizeState.elementId, {
+          width: newWidth,
+          height: newHeight
+        })
+      }
     }
 
     // Handle rotation
@@ -184,9 +249,15 @@ export default function TshirtCanvas({
       const angleDelta = currentAngle - rotateState.initialAngle
       const newRotation = rotateState.startRotation + angleDelta
 
-      onTextUpdate(rotateState.elementId, {
-        rotation: newRotation
-      })
+      if (rotateState.elementType === ELEMENT_TYPES.TEXT) {
+        onTextUpdate(rotateState.elementId, {
+          rotation: newRotation
+        })
+      } else {
+        onImageUpdate(rotateState.elementId, {
+          rotation: newRotation
+        })
+      }
     }
   }
 
@@ -198,14 +269,18 @@ export default function TshirtCanvas({
   }
 
   // Handle double click to edit text
-  const handleDoubleClick = (elementId) => {
-    onTextSelect(elementId)
+  const handleDoubleClick = (elementId, elementType) => {
+    onElementSelect(elementId, elementType)
   }
 
   // Handle canvas click (deselect)
   const handleCanvasClick = (e) => {
-    if (e.target === canvasRef.current) {
-      onTextSelect(null)
+    // Only deselect if we didn't click on a text or image element
+    const isTextElement = e.target.closest('[data-element-type="text"]')
+    const isImageElement = e.target.closest('[data-element-type="image"]')
+    
+    if (!isTextElement && !isImageElement) {
+      onElementSelect(null, null)
     }
   }
 
@@ -220,6 +295,18 @@ export default function TshirtCanvas({
       }
     }
   }, [dragState, resizeState, rotateState])
+
+  // Add ESC key to deselect
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && (selectedElementId || selectedElementType)) {
+        onElementSelect(null, null)
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [selectedElementId, selectedElementType, onElementSelect])
 
   // Text style helper
   const getTextStyle = (element) => ({
@@ -239,13 +326,27 @@ export default function TshirtCanvas({
     cursor: isEditingMode ? 'move' : 'pointer',
     userSelect: 'none',
     whiteSpace: 'nowrap',
-    zIndex: selectedElementId === element.id ? 10 : 5,
+    zIndex: selectedElementId === element.id && selectedElementType === ELEMENT_TYPES.TEXT ? 8 : 3,
     textShadow: '1px 1px 2px rgba(0,0,0,0.1)'
+  })
+
+  // Image style helper
+  const getImageStyle = (element) => ({
+    position: 'absolute',
+    left: element.x,
+    top: element.y,
+    width: element.width,
+    height: element.height,
+    transform: `translate(-50%, -50%) rotate(${element.rotation}deg)`,
+    cursor: isEditingMode ? 'move' : 'pointer',
+    userSelect: 'none',
+    zIndex: selectedElementId === element.id && selectedElementType === ELEMENT_TYPES.IMAGE ? 10 : 5,
+    objectFit: 'contain'
   })
 
   return (
     <div className="relative">
-      {/* T-shirt Container - Just the image, no background */}
+      {/* T-shirt Container */}
       <div 
         ref={canvasRef}
         className="relative rounded-lg overflow-hidden"
@@ -256,13 +357,12 @@ export default function TshirtCanvas({
         }}
         onClick={handleCanvasClick}
       >
-        {/* T-shirt Background Image - This should be your actual t-shirt image */}
+        {/* T-shirt Background Image */}
         <img
-          src="/images/tshirt.png" // Replace with your t-shirt image URL
+          src="/images/tshirt.png"
           alt="T-shirt"
           className="absolute inset-0 w-full h-full object-contain"
           style={{
-            backgroundImage: 'url("")', // Fallback or placeholder
             backgroundSize: 'contain',
             backgroundRepeat: 'no-repeat',
             backgroundPosition: 'center'
@@ -270,7 +370,7 @@ export default function TshirtCanvas({
         />
 
         {/* Design Area Boundary - Only show when editing */}
-        {isEditingMode && (
+        {isEditingMode && (selectedElementId && selectedElementType) && (
           <div
             className="absolute border-2 border-black border-dashed bg-transparent"
             style={{
@@ -283,55 +383,27 @@ export default function TshirtCanvas({
           />
         )}
 
-        {/* Background Image Layer */}
-        {backgroundImage && (
-          <img
-            src={backgroundImage}
-            alt="Background"
-            className="absolute object-contain"
-            style={{
-              left: DESIGN_AREA.x,
-              top: DESIGN_AREA.y,
-              width: DESIGN_AREA.width,
-              height: DESIGN_AREA.height,
-              zIndex: 1
-            }}
-          />
-        )}
-
-        {/* Text Elements */}
-        {textElements.map((element) => {
-          const isSelected = selectedElementId === element.id
-          const selectionBounds = getSelectionBounds(element)
+        {/* Image Elements */}
+        {imageElements.map((element) => {
+          const isSelected = selectedElementId === element.id && selectedElementType === ELEMENT_TYPES.IMAGE
+          const selectionBounds = getImageSelectionBounds(element)
           
           return (
-            <div key={element.id} style={{ position: 'relative' }}>
-              {/* Text Element */}
-              <div
-                style={getTextStyle(element)}
-                onMouseDown={(e) => handleMouseDown(e, element.id)}
-                onDoubleClick={() => handleDoubleClick(element.id)}
+            <div key={element.id} style={{ position: 'relative' }} data-element-type="image">
+              {/* Image Element */}
+              <img
+                src={element.src}
+                alt="Uploaded"
+                style={getImageStyle(element)}
+                onMouseDown={(e) => handleMouseDown(e, element.id, ELEMENT_TYPES.IMAGE)}
+                onDoubleClick={() => handleDoubleClick(element.id, ELEMENT_TYPES.IMAGE)}
                 className={`${isSelected ? 'ring-2 ring-blue-500' : ''}`}
-              >
-                {element.text}
-              </div>
+              />
 
               {/* Editing Handles - Only show when selected and in editing mode */}
               {isSelected && isEditingMode && (
                 <>
-                    {/* Selection Area Visualization */}
-                    {/* <div
-                    className="absolute border-2 border-red-500 bg-red-100 bg-opacity-20 pointer-events-none"
-                    style={{
-                        left: selectionBounds.left,
-                        top: selectionBounds.top,
-                        width: selectionBounds.width,
-                        height: selectionBounds.height,
-                        zIndex: 14
-                    }}
-                    /> */}
-
-                  {/* Corner Handles - Positioned at blue selection box corners */}
+                  {/* Corner Handles */}
                   <div
                     className="absolute w-3 h-3 bg-orange-500 rounded-full border border-white cursor-nw-resize hover:scale-150 transition-transform"
                     style={{
@@ -340,7 +412,7 @@ export default function TshirtCanvas({
                       zIndex: 15
                     }}
                     title="Resize"
-                    onMouseDown={(e) => handleResizeMouseDown(e, element.id, 'top-left')}
+                    onMouseDown={(e) => handleResizeMouseDown(e, element.id, ELEMENT_TYPES.IMAGE, 'top-left')}
                   />
                   <div
                     className="absolute w-3 h-3 bg-orange-500 rounded-full border border-white cursor-ne-resize hover:scale-150 transition-transform"
@@ -350,7 +422,7 @@ export default function TshirtCanvas({
                       zIndex: 15
                     }}
                     title="Resize"
-                    onMouseDown={(e) => handleResizeMouseDown(e, element.id, 'top-right')}
+                    onMouseDown={(e) => handleResizeMouseDown(e, element.id, ELEMENT_TYPES.IMAGE, 'top-right')}
                   />
                   <div
                     className="absolute w-3 h-3 bg-orange-500 rounded-full border border-white cursor-sw-resize hover:scale-150 transition-transform"
@@ -360,7 +432,7 @@ export default function TshirtCanvas({
                       zIndex: 15
                     }}
                     title="Resize"
-                    onMouseDown={(e) => handleResizeMouseDown(e, element.id, 'bottom-left')}
+                    onMouseDown={(e) => handleResizeMouseDown(e, element.id, ELEMENT_TYPES.IMAGE, 'bottom-left')}
                   />
                   <div
                     className="absolute w-3 h-3 bg-orange-500 rounded-full border border-white cursor-se-resize hover:scale-150 transition-transform"
@@ -370,7 +442,106 @@ export default function TshirtCanvas({
                       zIndex: 15
                     }}
                     title="Resize"
-                    onMouseDown={(e) => handleResizeMouseDown(e, element.id, 'bottom-right')}
+                    onMouseDown={(e) => handleResizeMouseDown(e, element.id, ELEMENT_TYPES.IMAGE, 'bottom-right')}
+                  />
+
+                  {/* Delete Button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onImageDelete(element.id)
+                    }}
+                    className="absolute w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors hover:scale-110"
+                    style={{
+                      left: selectionBounds.right + 15,
+                      top: selectionBounds.top - 15,
+                      zIndex: 15
+                    }}
+                    title="Delete"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+
+                  {/* Rotation Handle */}
+                  <div
+                    className="absolute w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors cursor-grab active:cursor-grabbing hover:scale-110"
+                    style={{
+                      left: element.x,
+                      top: selectionBounds.top - 25,
+                      transform: 'translate(-50%, -50%)',
+                      zIndex: 15
+                    }}
+                    title="Rotate"
+                    onMouseDown={(e) => handleRotateMouseDown(e, element.id, ELEMENT_TYPES.IMAGE)}
+                  >
+                    <RotateCw size={12} />
+                  </div>
+                </>
+              )}
+            </div>
+          )
+        })}
+
+        {/* Text Elements */}
+        {textElements.map((element) => {
+          const isSelected = selectedElementId === element.id && selectedElementType === ELEMENT_TYPES.TEXT
+          const selectionBounds = getTextSelectionBounds(element)
+          
+          return (
+            <div key={element.id} style={{ position: 'relative' }} data-element-type="text">
+              {/* Text Element */}
+              <div
+                style={getTextStyle(element)}
+                onMouseDown={(e) => handleMouseDown(e, element.id, ELEMENT_TYPES.TEXT)}
+                onDoubleClick={() => handleDoubleClick(element.id, ELEMENT_TYPES.TEXT)}
+                className={`${isSelected ? 'ring-2 ring-blue-500' : ''}`}
+              >
+                {element.text}
+              </div>
+
+              {/* Editing Handles - Only show when selected and in editing mode */}
+              {isSelected && isEditingMode && (
+                <>
+                  {/* Corner Handles */}
+                  <div
+                    className="absolute w-3 h-3 bg-orange-500 rounded-full border border-white cursor-nw-resize hover:scale-150 transition-transform"
+                    style={{
+                      left: selectionBounds.left - 10,
+                      top: selectionBounds.top - 10,
+                      zIndex: 15
+                    }}
+                    title="Resize"
+                    onMouseDown={(e) => handleResizeMouseDown(e, element.id, ELEMENT_TYPES.TEXT, 'top-left')}
+                  />
+                  <div
+                    className="absolute w-3 h-3 bg-orange-500 rounded-full border border-white cursor-ne-resize hover:scale-150 transition-transform"
+                    style={{
+                      left: selectionBounds.right,
+                      top: selectionBounds.top - 10,
+                      zIndex: 15
+                    }}
+                    title="Resize"
+                    onMouseDown={(e) => handleResizeMouseDown(e, element.id, ELEMENT_TYPES.TEXT, 'top-right')}
+                  />
+                  <div
+                    className="absolute w-3 h-3 bg-orange-500 rounded-full border border-white cursor-sw-resize hover:scale-150 transition-transform"
+                    style={{
+                      left: selectionBounds.left - 10,
+                      top: selectionBounds.bottom,
+                      zIndex: 15
+                    }}
+                    title="Resize"
+                    onMouseDown={(e) => handleResizeMouseDown(e, element.id, ELEMENT_TYPES.TEXT, 'bottom-left')}
+                  />
+                  <div
+                    className="absolute w-3 h-3 bg-orange-500 rounded-full border border-white cursor-se-resize hover:scale-150 transition-transform"
+                    style={{
+                      left: selectionBounds.right,
+                      top: selectionBounds.bottom,
+                      zIndex: 15
+                    }}
+                    title="Resize"
+                    onMouseDown={(e) => handleResizeMouseDown(e, element.id, ELEMENT_TYPES.TEXT, 'bottom-right')}
                   />
 
                   {/* Delete Button */}
@@ -400,7 +571,7 @@ export default function TshirtCanvas({
                       zIndex: 15
                     }}
                     title="Rotate"
-                    onMouseDown={(e) => handleRotateMouseDown(e, element.id)}
+                    onMouseDown={(e) => handleRotateMouseDown(e, element.id, ELEMENT_TYPES.TEXT)}
                   >
                     <RotateCw size={12} />
                   </div>
@@ -413,8 +584,9 @@ export default function TshirtCanvas({
 
       {/* Instructions */}
       <div className="mt-4 text-center text-sm text-gray-600">
-        <p>텍스트를 클릭하여 선택하고 드래그하여 이동하세요</p>
+        <p>텍스트나 이미지를 클릭하여 선택하고 드래그하여 이동하세요</p>
         <p>모서리 핸들: 중앙으로 드래그하면 작게, 바깥으로 드래그하면 크게</p>
+        <p>빈 영역 클릭 또는 ESC 키로 선택 해제</p>
       </div>
     </div>
   )
