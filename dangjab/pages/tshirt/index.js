@@ -511,11 +511,14 @@ function useTexture(url) {
   return texture
 }
 
-useGLTF.preload('/Untitled.glb')
+useGLTF.preload('/cube.glb')
 
 // Updated Shirt component with better decal positioning
+// Updated Shirt component with better error handling and debugging
+// Debug version of Shirt component to make the cube visible
+// Fixed Shirt component with proper scaling
 function Shirt({ color, decalImage, textSettings }) {
-  const gltf = useGLTF('/Untitled.glb')
+  const gltf = useGLTF('/cube.glb')
   const { nodes, materials } = gltf
   const imageTexture = useTexture(decalImage)
   
@@ -536,29 +539,31 @@ function Shirt({ color, decalImage, textSettings }) {
   }
   
   return (
-    <group rotation={[0,0,0]}>
-      {/* Main t-shirt mesh */}
+    <group rotation={[0, 0, 0]}>
+      {/* Main t-shirt mesh with proper scaling */}
       <mesh 
         castShadow 
         geometry={nodes[mainMeshName].geometry} 
         material={materials[mainMaterialName]}
         material-roughness={1}
+        scale={[0.1, 0.1, 0.1]} // Scale down to 10% of original size
+        position={[0, 0, 0]}
       />
       
-      {/* FIXED: Image decal with corrected positioning */}
+      {/* Image decal with adjusted positioning for smaller model */}
       {imageTexture && (
         <SurfaceDecal 
           texture={imageTexture}
           position={[0, 0.04, 0.15]}
-          scale={0.25} // Reduced scale for better fit
-          rotation={[0, 0, 0]} // Reset rotation for decal
+          scale={0.025} // Smaller scale to match the scaled-down model
+          rotation={[0, 0, 0]}
         />
       )}
       
-      {/* FIXED: Text elements with corrected positioning */}
+      {/* Text elements with adjusted positioning */}
       {textSettings.topText && (
         <Text
-          position={[0, -0.05, 0.16]} // Adjusted for rotated coordinate system
+          position={[0, 0.1, 0.16]} // Adjusted for smaller model
           fontSize={textSettings.fontSize === 'small' ? 0.025 : textSettings.fontSize === 'large' ? 0.055 : 0.04}
           color={textSettings.textColor}
           anchorX="center"
@@ -571,7 +576,7 @@ function Shirt({ color, decalImage, textSettings }) {
       
       {textSettings.bottomText && (
         <Text
-          position={[0, -0.35, 0.16]} // Moved relative to new coordinate system
+          position={[0, -0.1, 0.16]} // Adjusted for smaller model
           fontSize={textSettings.fontSize === 'small' ? 0.025 : textSettings.fontSize === 'large' ? 0.055 : 0.04}
           color={textSettings.textColor}
           anchorX="center"
@@ -584,7 +589,7 @@ function Shirt({ color, decalImage, textSettings }) {
       
       {textSettings.leftText && (
         <Text
-          position={[-0.15, -0.2, 0.16]} // Adjusted for new positioning
+          position={[-0.08, 0, 0.16]} // Adjusted for smaller model
           fontSize={textSettings.fontSize === 'small' ? 0.025 : textSettings.fontSize === 'large' ? 0.055 : 0.04}
           color={textSettings.textColor}
           anchorX="center"
@@ -597,7 +602,7 @@ function Shirt({ color, decalImage, textSettings }) {
       
       {textSettings.rightText && (
         <Text
-          position={[0.15, -0.2, 0.16]} // Adjusted for new positioning
+          position={[0.08, 0, 0.16]} // Adjusted for smaller model
           fontSize={textSettings.fontSize === 'small' ? 0.025 : textSettings.fontSize === 'large' ? 0.055 : 0.04}
           color={textSettings.textColor}
           anchorX="center"
