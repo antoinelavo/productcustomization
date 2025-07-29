@@ -6,11 +6,11 @@ import { Minus, Plus } from 'lucide-react'
 
 const SIZES = [
   { value: 'S', label: 'S', available: true },
-  { value: 'M', label: 'M', available: true, recommended: true },
+  { value: 'M', label: 'M', available: true },
   { value: 'L', label: 'L', available: true },
   { value: 'XL', label: 'XL', available: true },
-  { value: '2XL', label: '2XL', available: true, extraCost: 2000 },
-  { value: '3XL', label: '3XL', available: true, extraCost: 2000 }
+  { value: '2XL', label: '2XL', available: true },
+  { value: '3XL', label: '3XL', available: true }
 ]
 
 export default function DefaultPanel({
@@ -80,21 +80,15 @@ export default function DefaultPanel({
                 `}
               >
                 {size.label}
-                {size.recommended && selectedSize !== size.value && (
-                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-orange-500 rounded-full"></div>
-                )}
-                {size.extraCost && (
+                {/* {size.extraCost && (
                   <div className="text-xs text-gray-500 mt-1">
                     +{size.extraCost.toLocaleString()}원
                   </div>
-                )}
+                )} */}
               </button>
             ))}
           </div>
-          
-          {selectedSizeData?.recommended && (
-            <p className="text-xs text-orange-600 mt-2">추천 사이즈</p>
-          )}
+        
         </div>
 
         {/* Quantity Selection */}

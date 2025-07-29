@@ -186,13 +186,13 @@ export default function DirectEditTshirtCustomizer({
       icon: Image, 
       label: '이미지 추가',
       isActive: activePanel === PANEL_TYPES.IMAGE 
-    },
-    { 
-      type: PANEL_TYPES.DESIGN, 
-      icon: Palette, 
-      label: '디자인 추가',
-      isActive: activePanel === PANEL_TYPES.DESIGN 
     }
+    // { 
+    //   type: PANEL_TYPES.DESIGN, 
+    //   icon: Palette, 
+    //   label: '디자인 추가',
+    //   isActive: activePanel === PANEL_TYPES.DESIGN 
+    // }
   ]
 
   return (
@@ -329,8 +329,8 @@ export default function DirectEditTshirtCustomizer({
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <DesignPanel
-                  />
+                  {/* <DesignPanel
+                  /> */}
                 </motion.div>
               )}
             </AnimatePresence>
