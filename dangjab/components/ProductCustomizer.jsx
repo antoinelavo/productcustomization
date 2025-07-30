@@ -337,7 +337,7 @@ export default function ProductCustomizer({ product, customizationData, onCustom
     <section className="relative w-full h-[80svh] md:h-[80svh] bg-gray-50">
       {/* 3D Canvas Background */}
       <div 
-        className="absolute inset-0 w-full lg:w-[40%] h-full"
+        className="absolute inset-0 w-full lg:w-[70%] h-full"
         style={{
           backgroundImage: 'url(/images/grass-background.jpg)',
           backgroundSize: 'cover',
@@ -436,10 +436,10 @@ function DesktopCustomizer({
   return (
     <div className="w-full h-full flex">
       {/* Left area - 3D Preview (40%) */}
-      <div className="flex-[0.4] relative">
+      <div className="flex-[0.7] relative">
         {/* Disclaimer - Top Left */}
         <div className="absolute top-6 left-6 z-50 pointer-events-auto">
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 shadow-sm max-w-xs">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 shadow-sm">
             <div className="flex items-start space-x-2">
               <Info className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
               <div className="text-sm text-yellow-800">
@@ -471,7 +471,7 @@ function DesktopCustomizer({
       </div>
 
       {/* Middle - Design Preview Panel (30%) */}
-      <div className="flex-[0.3] p-4 overflow-y-auto pointer-events-auto">
+      {/* <div className="flex-[0.3] p-4 overflow-y-auto pointer-events-auto">
         <DesignPreviewPanel
           imageUrl={state.uploadedImage}
           textSettings={textSettings}
@@ -480,7 +480,7 @@ function DesktopCustomizer({
           selectedTextId={selectedTextId}
           onSelectText={onSelectText}
         />
-      </div>
+      </div> */}
 
       {/* Right Panel - Controls (30%) */}
       <div className="flex-[0.3] p-6 space-y-6 bg-white/90 backdrop-blur-sm h-full overflow-y-auto pointer-events-auto">
