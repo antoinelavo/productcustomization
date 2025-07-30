@@ -1,7 +1,7 @@
+//PreviewImages
 import React, { useState } from 'react'
-import { Eye, Star, Upload, X, Scissors, Loader2, AlertCircle } from 'lucide-react'
+import { Eye, Star, Upload, X, Scissors } from 'lucide-react'
 import LassoTool from '@/components/LassoTool'
-import { uploadImageToStorage } from '@/lib/supabaseStorage'
 
 // Sample dog images for preview - you can replace these with your actual image URLs
 const PREVIEW_DOGS = [
@@ -25,65 +25,12 @@ const PREVIEW_DOGS = [
   }
 ]
 
-function PreviewImages({ 
-  selectedImage, 
-  onImageSelect, 
-  fileInputRef, 
-  handleImageUpload,
-  uploadState = { isUploading: false, uploadError: null }
-}) {
+function PreviewImages({ selectedImage, onImageSelect, fileInputRef, handleImageUpload, disabled = false }) {
   const [showLassoTool, setShowLassoTool] = useState(false)
-  const [localUploadState, setLocalUploadState] = useState({
-    isUploading: false,
-    uploadError: null
-  })
-
-  // Use either passed uploadState or local state
-  const currentUploadState = uploadState.isUploading !== undefined ? uploadState : localUploadState
   
   const handleUploadClick = () => {
-    if (!currentUploadState.isUploading) {
+    if (!disabled) {
       fileInputRef.current?.click()
-    }
-  }
-
-  // Enhanced upload handler with Supabase storage
-  const handleFileUpload = async (event) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
-    // Reset upload state
-    setLocalUploadState({ isUploading: true, uploadError: null })
-
-    try {
-      console.log('📤 Starting image upload:', file.name);
-
-      // Upload to Supabase Storage
-      const { url, error } = await uploadImageToStorage(file)
-
-      if (error) {
-        console.error('❌ Upload failed:', error);
-        setLocalUploadState({ isUploading: false, uploadError: error })
-        return
-      }
-
-      if (url) {
-        console.log('✅ Upload successful, URL:', url);
-        onImageSelect(url)
-        setLocalUploadState({ isUploading: false, uploadError: null })
-      }
-
-    } catch (error) {
-      console.error('❌ Upload error:', error);
-      setLocalUploadState({ 
-        isUploading: false, 
-        uploadError: 'Upload failed. Please try again.' 
-      })
-    }
-
-    // Clear the file input so the same file can be uploaded again if needed
-    if (event.target) {
-      event.target.value = ''
     }
   }
 
@@ -91,13 +38,15 @@ function PreviewImages({
   const isUserUpload = selectedImage && !PREVIEW_DOGS.some(dog => dog.fullImage === selectedImage)
 
   const clearUploadedImage = () => {
-    onImageSelect(null)
-    // Clear any upload errors when clearing image
-    setLocalUploadState(prev => ({ ...prev, uploadError: null }))
+    if (!disabled) {
+      onImageSelect(null)
+    }
   }
 
   const handleRemoveBackground = () => {
-    setShowLassoTool(true)
+    if (!disabled) {
+      setShowLassoTool(true)
+    }
   }
 
   const handleLassoComplete = (processedImageUrl) => {
@@ -109,14 +58,10 @@ function PreviewImages({
     setShowLassoTool(false)
   }
 
-  const handlePreviewSelect = (imageUrl) => {
-    onImageSelect(imageUrl)
-    // Clear any upload errors when selecting a preview image
-    setLocalUploadState(prev => ({ ...prev, uploadError: null }))
-  }
-
   return (
-    <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-gray-200">
+    <div className={`bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-gray-200 ${
+      disabled ? 'opacity-50' : ''
+    }`}>
       <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
         <Eye className="mr-2" size={20} />
         사진 선택
@@ -124,7 +69,7 @@ function PreviewImages({
       
       {/* Upload Section - Primary Action */}
       <div className="mb-6">
-        <p className="text-sm text-gray-600 mb-3">
+        <p className={`text-sm mb-3 ${disabled ? 'text-gray-400' : 'text-gray-600'}`}>
           고객님의 반려동물 사진을 업로드해주세요
         </p>
         
@@ -133,37 +78,32 @@ function PreviewImages({
           ref={fileInputRef}
           type="file"
           accept="image/*"
-          onChange={handleFileUpload}
+          onChange={handleImageUpload}
           className="hidden"
-          disabled={currentUploadState.isUploading}
+          disabled={disabled}
         />
         
         {/* Upload Button or Uploaded Image Display */}
-        {currentUploadState.isUploading ? (
-          /* Upload Progress */
-          <div className="w-full flex items-center justify-center space-x-3 py-4 px-6 bg-blue-100 border-2 border-blue-300 text-blue-700 font-bold rounded-xl">
-            <Loader2 size={20} className="animate-spin" />
-            <span>업로드 중...</span>
-          </div>
-        ) : isUserUpload ? (
+        {isUserUpload ? (
           <div className="relative">
             {/* Show uploaded image */}
-            <div className="relative rounded-xl overflow-hidden border-2 border-blue-500 ring-2 ring-blue-200">
+            <div className={`relative rounded-xl overflow-hidden border-2 ring-2 ${
+              disabled 
+                ? 'border-gray-300 ring-gray-200' 
+                : 'border-blue-500 ring-blue-200'
+            }`}>
               <img 
                 src={selectedImage} 
                 alt="업로드된 이미지"
                 className="w-full h-48 object-cover"
-                onError={(e) => {
-                  e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik03NiA2NEgxMTZWNzZINzZWNjRaIiBmaWxsPSIjOUNBM0FGIi8+CjxwYXRoIGQ9Ik0xMTYgNzZIMTI4VjExNkgxMTZWNzZaIiBmaWxsPSIjOUNBM0FGIi8+CjxwYXRoIGQ9Ik0xMTYgMTE2SDc2VjEyOEgxMTZWMTE2WiIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNNzYgMTE2SDY0Vjc2SDc2VjExNloiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+';
-                }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
               <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm rounded-lg px-3 py-1">
-                <span className="text-sm font-medium text-gray-800">
-                  {selectedImage.includes('supabase') ? '업로드된 사진' : '업로드된 사진'}
-                </span>
+                <span className="text-sm font-medium text-gray-800">업로드된 사진</span>
               </div>
-              <div className="absolute top-2 right-2 bg-blue-500 rounded-full p-1">
+              <div className={`absolute top-2 right-2 rounded-full p-1 ${
+                disabled ? 'bg-gray-400' : 'bg-blue-500'
+              }`}>
                 <Star className="w-3 h-3 text-white fill-current" />
               </div>
             </div>
@@ -172,16 +112,24 @@ function PreviewImages({
             <div className="flex gap-2 mt-3">
               <button
                 onClick={handleUploadClick}
-                disabled={currentUploadState.isUploading}
-                className="flex-1 flex items-center justify-center space-x-2 py-2 px-4 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 disabled:cursor-not-allowed text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200"
+                disabled={disabled}
+                className={`flex-1 flex items-center justify-center space-x-2 py-2 px-4 text-sm font-medium rounded-lg transition-colors duration-200 ${
+                  disabled 
+                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                }`}
               >
                 <Upload size={16} />
                 <span>다른 사진 업로드</span>
               </button>
               <button
                 onClick={clearUploadedImage}
-                disabled={currentUploadState.isUploading}
-                className="flex items-center justify-center space-x-2 py-2 px-4 bg-red-100 hover:bg-red-200 disabled:bg-red-50 disabled:cursor-not-allowed text-red-700 text-sm font-medium rounded-lg transition-colors duration-200"
+                disabled={disabled}
+                className={`flex items-center justify-center space-x-2 py-2 px-4 text-sm font-medium rounded-lg transition-colors duration-200 ${
+                  disabled 
+                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+                    : 'bg-red-100 hover:bg-red-200 text-red-700'
+                }`}
               >
                 <X size={16} />
                 <span>삭제</span>
@@ -191,8 +139,12 @@ function PreviewImages({
             {/* Background removal button */}
             <button
               onClick={handleRemoveBackground}
-              disabled={currentUploadState.isUploading}
-              className="w-full flex items-center justify-center space-x-2 py-2 px-4 bg-blue-100 hover:bg-blue-200 disabled:bg-blue-50 disabled:cursor-not-allowed text-blue-700 text-sm font-medium rounded-lg transition-colors duration-200 mt-2"
+              disabled={disabled}
+              className={`w-full flex items-center justify-center space-x-2 py-2 px-4 text-sm font-medium rounded-lg transition-colors duration-200 mt-2 ${
+                disabled 
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+                  : 'bg-blue-100 hover:bg-blue-200 text-blue-700'
+              }`}
             >
               <Scissors size={16} />
               <span>배경 제거</span>
@@ -202,45 +154,16 @@ function PreviewImages({
           /* Upload Button */
           <button
             onClick={handleUploadClick}
-            disabled={currentUploadState.isUploading}
-            className="w-full flex items-center justify-center space-x-3 py-4 px-6 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-colors duration-200 shadow-lg"
+            disabled={disabled}
+            className={`w-full flex items-center justify-center space-x-3 py-4 px-6 font-bold rounded-xl transition-colors duration-200 shadow-lg ${
+              disabled 
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
+            }`}
           >
             <Upload size={20} />
             <span>반려동물 사진 업로드</span>
           </button>
-        )}
-
-        {/* Upload Error Display */}
-        {currentUploadState.uploadError && (
-          <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <div className="flex items-start space-x-2">
-              <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-red-800">업로드 실패</p>
-                <p className="text-sm text-red-600">{currentUploadState.uploadError}</p>
-                <button
-                  onClick={handleUploadClick}
-                  className="text-sm text-red-700 underline hover:text-red-800 mt-1"
-                >
-                  다시 시도
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Success indicator for uploaded images */}
-        {isUserUpload && !currentUploadState.isUploading && !currentUploadState.uploadError && (
-          <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-            <div className="flex items-start space-x-2">
-              <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center mt-0.5">
-                <span className="text-white text-xs">✓</span>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-green-800">업로드 완료!</p>
-              </div>
-            </div>
-          </div>
         )}
       </div>
       
@@ -250,12 +173,14 @@ function PreviewImages({
           <div className="w-full border-t border-gray-200" />
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="px-2 bg-white text-gray-500">또는 예시 사진 선택</span>
+          <span className={`px-2 bg-white ${disabled ? 'text-gray-400' : 'text-gray-500'}`}>
+            또는 예시 사진 선택
+          </span>
         </div>
       </div>
       
       {/* Preview Dogs Section - Secondary Options */}
-      <p className="text-sm text-gray-600 mb-4">
+      <p className={`text-sm mb-4 ${disabled ? 'text-gray-400' : 'text-gray-600'}`}>
         아래 예시 사진으로 미리 체험해보세요
       </p>
       
@@ -263,13 +188,17 @@ function PreviewImages({
         {PREVIEW_DOGS.map((dog) => (
           <button
             key={dog.id}
-            onClick={() => handlePreviewSelect(dog.fullImage)}
-            disabled={currentUploadState.isUploading}
-            className={`relative group rounded-xl overflow-hidden border-2 transition-all duration-200 hover:scale-105 ${
-              selectedImage === dog.fullImage && !isUserUpload
+            onClick={() => !disabled && onImageSelect(dog.fullImage)}
+            disabled={disabled}
+            className={`relative group rounded-xl overflow-hidden border-2 transition-all duration-200 ${
+              disabled 
+                ? 'cursor-not-allowed opacity-50' 
+                : 'hover:scale-105'
+            } ${
+              selectedImage === dog.fullImage && !isUserUpload && !disabled
                 ? 'border-pink-500 ring-2 ring-pink-200' 
                 : 'border-gray-200 hover:border-pink-300'
-            } ${isUserUpload || currentUploadState.isUploading ? 'opacity-50' : ''}`}
+            } ${(isUserUpload || disabled) ? 'opacity-50' : ''}`}
           >
             {/* Image */}
             <div className="aspect-square bg-gray-100 flex items-center justify-center">
@@ -290,14 +219,14 @@ function PreviewImages({
             </div>
             
             {/* Overlay on hover */}
-            <div className={`absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center ${isUserUpload || currentUploadState.isUploading ? 'hidden' : ''}`}>
+            <div className={`absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center ${(isUserUpload || disabled) ? 'hidden' : ''}`}>
               <div className="bg-white/90 backdrop-blur-sm rounded-lg px-3 py-1">
                 <span className="text-xs font-medium text-gray-800">{dog.name}</span>
               </div>
             </div>
             
             {/* Selected indicator */}
-            {selectedImage === dog.fullImage && !isUserUpload && (
+            {selectedImage === dog.fullImage && !isUserUpload && !disabled && (
               <div className="absolute top-2 right-2 bg-pink-500 rounded-full p-1">
                 <Star className="w-3 h-3 text-white fill-current" />
               </div>
@@ -307,22 +236,34 @@ function PreviewImages({
       </div>
       
       {/* Clear selection button - only show if preview dog is selected and no upload */}
-      {selectedImage && !isUserUpload && PREVIEW_DOGS.some(dog => dog.fullImage === selectedImage) && !currentUploadState.isUploading && (
+      {selectedImage && !isUserUpload && !disabled && PREVIEW_DOGS.some(dog => dog.fullImage === selectedImage) && (
         <button
-          onClick={() => handlePreviewSelect(null)}
+          onClick={() => onImageSelect(null)}
           className="w-full mt-4 py-2 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200"
         >
           선택 취소
         </button>
       )}
       
-      {/* Lasso Tool Modal */}
-      <LassoTool
-        isOpen={showLassoTool}
-        imageUrl={selectedImage}
-        onClose={handleLassoClose}
-        onComplete={handleLassoComplete}
-      />
+      {/* Disabled message */}
+      {disabled && (
+        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm text-blue-800">
+            <span className="font-medium">알림:</span> 템플릿 모드에서는 이미지 업로드가 비활성화됩니다. 
+            템플릿에 적용할 사진 (반려동물 사진)은 아래 "업로드" 버튼을 눌러 추가해주세요. 
+          </p>
+        </div>
+      )}
+      
+      {/* Lasso Tool Modal - Only show when not disabled */}
+      {!disabled && (
+        <LassoTool
+          isOpen={showLassoTool}
+          imageUrl={selectedImage}
+          onClose={handleLassoClose}
+          onComplete={handleLassoComplete}
+        />
+      )}
     </div>
   )
 }

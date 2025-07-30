@@ -4,7 +4,6 @@
 import React, { useState } from 'react'
 import { AlertTriangle, X, Check } from 'lucide-react'
 
-// Mock template data that would normally come from PSD files
 const TEMPLATES = {
   travel: {
     id: 'travel',
