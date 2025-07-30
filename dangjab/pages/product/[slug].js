@@ -152,7 +152,7 @@ export default function ProductPage() {
       <ProductDescription product={product} />
       
       {/* Reviews Section */}
-      <ReviewsSection product={product} />
+      <ReviewsSection productSlug="tshirt" />
     </Layout>
   );
 }

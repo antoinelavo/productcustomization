@@ -1,79 +1,38 @@
 // @/components/ReviewsSection.jsx
-import React, { useState } from 'react';
-import { Star, ThumbsUp, User, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Star, ThumbsUp, ChevronDown, ChevronUp } from 'lucide-react';
+import { getReviewsByProduct, calculateReviewStats } from '@/lib/reviews';
 
-export default function ReviewsSection({ product }) {
+export default function ReviewsSection({ productSlug }) {
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [sortBy, setSortBy] = useState('newest');
 
-  // Sample reviews data
-  const reviews = [
-    {
-      id: 1,
-      name: '김**',
-      rating: 5,
-      date: '2024-12-15',
-      title: '퀄리티가 정말 좋아요!',
-      content: '우리 강아지 사진으로 만든 티셔츠인데 프린팅 품질이 너무 좋네요. 색상도 선명하고 원단도 부드러워요. 다음에 또 주문할 예정입니다.',
-      helpful: 12,
-      verified: true,
-      images: ['/api/placeholder/100/100', '/api/placeholder/100/100']
-    },
-    {
-      id: 2,
-      name: '이**',
-      rating: 4,
-      date: '2024-12-10',
-      title: '만족스러운 제품이에요',
-      content: '디자인 그대로 잘 나왔고 배송도 빨랐어요. 다만 사이즈가 생각보다 약간 작은 것 같아요. 그래도 전반적으로 만족합니다!',
-      helpful: 8,
-      verified: true,
-      images: ['/api/placeholder/100/100']
-    },
-    {
-      id: 3,
-      name: '박**',
-      rating: 5,
-      date: '2024-12-08',
-      title: '선물로 주문했는데 너무 좋아해요',
-      content: '친구 생일선물로 주문했는데 너무 좋아하더라구요. 포장도 깔끔하고 퀄리티도 기대 이상이었어요. 추천합니다!',
-      helpful: 15,
-      verified: true,
-      images: []
-    },
-    {
-      id: 4,
-      name: '최**',
-      rating: 4,
-      date: '2024-12-05',
-      title: '재주문 의사 있어요',
-      content: '첫 주문이었는데 생각보다 만족스러워요. 프린팅이 깔끔하고 세탁 후에도 변형이 없네요.',
-      helpful: 6,
-      verified: true,
-      images: ['/api/placeholder/100/100']
-    },
-    {
-      id: 5,
-      name: '장**',
-      rating: 3,
-      date: '2024-12-01',
-      title: '보통이에요',
-      content: '나쁘지 않은데 기대했던 것보다는 조금 아쉬워요. 색상이 화면과 약간 달라요.',
-      helpful: 3,
-      verified: true,
-      images: []
+  // Fetch reviews when component mounts or sortBy changes
+  useEffect(() => {
+    async function fetchReviews() {
+      setLoading(true);
+      const { reviews: fetchedReviews, error } = await getReviewsByProduct(productSlug, sortBy);
+      
+      if (error) {
+        setError('리뷰를 불러오는데 실패했습니다.');
+      } else {
+        setReviews(fetchedReviews);
+        setError(null);
+      }
+      setLoading(false);
     }
-  ];
 
-  const avgRating = (reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1);
-  const totalReviews = reviews.length;
+    if (productSlug) {
+      fetchReviews();
+    }
+  }, [productSlug, sortBy]);
+
+  // Calculate review statistics
+  const { avgRating, totalReviews, ratingDistribution } = calculateReviewStats(reviews);
   
-  const ratingDistribution = [5, 4, 3, 2, 1].map(rating => ({
-    rating,
-    count: reviews.filter(review => review.rating === rating).length,
-    percentage: (reviews.filter(review => review.rating === rating).length / totalReviews) * 100
-  }));
-
   const displayedReviews = showAllReviews ? reviews : reviews.slice(0, 3);
 
   const renderStars = (rating) => {
@@ -85,6 +44,47 @@ export default function ReviewsSection({ product }) {
       />
     ));
   };
+
+  // Loading state
+  if (loading) {
+    return (
+      <section className="py-16 bg-white">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+            <p className="mt-4 text-gray-600">리뷰를 불러오고 있습니다...</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <section className="py-16 bg-white">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <p className="text-red-600">{error}</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // No reviews state
+  if (reviews.length === 0) {
+    return (
+      <section className="py-16 bg-white">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl font-bold text-gray-900 mb-8">고객 리뷰</h2>
+          <div className="text-center py-12">
+            <p className="text-gray-600">아직 리뷰가 없습니다.</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="py-16 bg-white">
@@ -157,24 +157,24 @@ export default function ReviewsSection({ product }) {
           {displayedReviews.map((review) => (
             <div key={review.id} className="border-b border-gray-200 pb-8">
               <div className="flex items-start space-x-4">
-                
-                {/* User Avatar */}
-                <div className="bg-gray-200 rounded-full p-3">
-                  <User size={24} className="text-gray-600" />
-                </div>
 
                 {/* Review Content */}
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center space-x-4">
-                      <div className="font-semibold text-gray-900">{review.name}</div>
-                      {review.verified && (
+                      <div className="font-semibold text-gray-900">{review.reviewer_name}</div>
+                      {review.verified_purchase && (
                         <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
                           구매 확인
                         </span>
                       )}
+                      {review.source && review.source !== 'Website' && (
+                        <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
+                          {review.source}
+                        </span>
+                      )}
                     </div>
-                    <div className="text-sm text-gray-500">{review.date}</div>
+                    <div className="text-sm text-gray-500">{review.review_date}</div>
                   </div>
 
                   {/* Rating and Title */}
@@ -188,24 +188,10 @@ export default function ReviewsSection({ product }) {
                   {/* Review Text */}
                   <p className="text-gray-700 mb-4 leading-relaxed">{review.content}</p>
 
-                  {/* Review Images */}
-                  {review.images.length > 0 && (
-                    <div className="flex space-x-2 mb-4">
-                      {review.images.map((image, index) => (
-                        <img
-                          key={index}
-                          src={image}
-                          alt={`리뷰 이미지 ${index + 1}`}
-                          className="w-20 h-20 object-cover rounded-lg border border-gray-200"
-                        />
-                      ))}
-                    </div>
-                  )}
-
                   {/* Helpful Button */}
                   <button className="flex items-center space-x-2 text-sm text-gray-600 hover:text-gray-900 transition-colors">
                     <ThumbsUp size={14} />
-                    <span>도움이 됐어요 ({review.helpful})</span>
+                    <span>도움이 됐어요 ({review.helpful_count})</span>
                   </button>
                 </div>
               </div>
