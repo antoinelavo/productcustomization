@@ -597,7 +597,7 @@ function MobileCustomizer({ state, setState, fileInputRef, handleImageUpload, ha
       </div>
 
       {/* Disclaimer - Mobile Top Left (below top controls) */}
-      <div className="absolute top-20 left-4 right-4 z-40 pointer-events-auto">
+      <div className="absolute top-20 left-4 right-4 z-40 pointer-events-auto hidden md:block">
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 shadow-sm">
           <div className="flex items-start space-x-2">
             <Info className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
