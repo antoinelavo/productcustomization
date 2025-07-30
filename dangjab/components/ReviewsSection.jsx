@@ -1,6 +1,6 @@
 // @/components/ReviewsSection.jsx
 import React, { useState, useEffect } from 'react';
-import { Star, ThumbsUp, ChevronDown, ChevronUp } from 'lucide-react';
+import { Star, ThumbsUp, User, ChevronDown, ChevronUp, X} from 'lucide-react';
 import { getReviewsByProduct, calculateReviewStats } from '@/lib/reviews';
 
 export default function ReviewsSection({ productSlug }) {
@@ -9,6 +9,7 @@ export default function ReviewsSection({ productSlug }) {
   const [error, setError] = useState(null);
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [sortBy, setSortBy] = useState('newest');
+  const [selectedImage, setSelectedImage] = useState(null);
 
   // Fetch reviews when component mounts or sortBy changes
   useEffect(() => {
@@ -29,6 +30,26 @@ export default function ReviewsSection({ productSlug }) {
       fetchReviews();
     }
   }, [productSlug, sortBy]);
+
+  // Handle escape key to close modal
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') {
+        setSelectedImage(null);
+      }
+    };
+
+    if (selectedImage) {
+      document.addEventListener('keydown', handleEscape);
+      // Prevent body scroll when modal is open
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+    };
+  }, [selectedImage]);
 
   // Calculate review statistics
   const { avgRating, totalReviews, ratingDistribution } = calculateReviewStats(reviews);
@@ -157,6 +178,11 @@ export default function ReviewsSection({ productSlug }) {
           {displayedReviews.map((review) => (
             <div key={review.id} className="border-b border-gray-200 pb-8">
               <div className="flex items-start space-x-4">
+                
+                {/* User Avatar */}
+                <div className="bg-gray-200 rounded-full p-3">
+                  <User size={24} className="text-gray-600" />
+                </div>
 
                 {/* Review Content */}
                 <div className="flex-1">
@@ -188,6 +214,23 @@ export default function ReviewsSection({ productSlug }) {
                   {/* Review Text */}
                   <p className="text-gray-700 mb-4 leading-relaxed">{review.content}</p>
 
+                  {/* Review Images */}
+                  {review.images && review.images.length > 0 && (
+                    <div className="flex space-x-2 mb-4">
+                      {review.images
+                        .sort((a, b) => a.order - b.order) // Sort by order field
+                        .map((image, index) => (
+                          <img
+                            key={index}
+                            src={image.url}
+                            alt={`리뷰 이미지 ${index + 1}`}
+                            className="w-20 h-20 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
+                            onClick={() => setSelectedImage(image.url)}
+                          />
+                        ))}
+                    </div>
+                  )}
+
                   {/* Helpful Button */}
                   <button className="flex items-center space-x-2 text-sm text-gray-600 hover:text-gray-900 transition-colors">
                     <ThumbsUp size={14} />
@@ -212,6 +255,32 @@ export default function ReviewsSection({ productSlug }) {
           </div>
         )}
       </div>
+
+      {/* Image Modal */}
+      {selectedImage && (
+        <div 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setSelectedImage(null)}
+        >
+          <div className="relative max-w-4xl max-h-full">
+            {/* Close Button */}
+            <button
+              onClick={() => setSelectedImage(null)}
+              className="absolute -top-12 right-0 text-white hover:text-gray-300 transition-colors bg-black bg-opacity-50 rounded-full p-2"
+            >
+              <X size={24} />
+            </button>
+            
+            {/* Full Size Image */}
+            <img
+              src={selectedImage}
+              alt="리뷰 이미지 확대"
+              className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()} // Prevent closing when clicking on image
+            />
+          </div>
+        </div>
+      )}
     </section>
   );
 }
