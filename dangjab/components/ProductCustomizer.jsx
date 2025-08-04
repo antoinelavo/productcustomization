@@ -140,18 +140,16 @@ export default function ProductCustomizer({ product }) {
 const handleDownloadPSD = async () => {
   const currentImage = getCurrentImage()
   if (!currentImage) {
-    alert('Please upload an image or select a template first!')
+    alert('이미지를 업로드하거나 시안을 골라주세요.')
     return
   }
-
-  alert('Generating PSD file... This may take a moment!')
   
   try {
     await downloadRealPSD()
-    alert('PSD file downloaded successfully!')
+    alert('PSD 파일 다운로드에 성공했습니다!')
   } catch (error) {
     console.error('PSD generation failed:', error)
-    alert('Failed to generate PSD. Please try again.')
+    alert('실패하였습니다. 다시 시도해주세요.')
   }
 }
 
