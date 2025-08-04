@@ -38,6 +38,39 @@ export async function getReviewsByProduct(productSlug, sortBy = 'newest') {
   return { reviews: reviews || [], error: null };
 }
 
+export async function submitReview(reviewData) {
+  try {
+    // Prepare the review data
+    const reviewToSubmit = {
+      product_slug: reviewData.productSlug,
+      reviewer_name: '익명',
+      rating: reviewData.rating,
+      title: reviewData.title,
+      content: reviewData.content,
+      review_date: new Date().toISOString().split('T')[0], // YYYY-MM-DD format
+      helpful_count: 0,
+      source: 'Website',
+      verified_purchase: false,
+      images: []
+    };
+
+    const { data, error } = await supabase
+      .from('reviews')
+      .insert([reviewToSubmit])
+      .select();
+
+    if (error) {
+      console.error('Error submitting review:', error);
+      return { success: false, error: '리뷰 작성에 실패했습니다.' };
+    }
+
+    return { success: true, data: data[0] };
+  } catch (error) {
+    console.error('Error submitting review:', error);
+    return { success: false, error: '리뷰 작성에 실패했습니다.' };
+  }
+}
+
 export function calculateReviewStats(reviews) {
   if (!reviews || reviews.length === 0) {
     return {

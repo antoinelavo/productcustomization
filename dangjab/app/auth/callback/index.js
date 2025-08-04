@@ -1,53 +1,86 @@
-// @/app/auth/callback/page.js
-'use client'
-
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+// pages/auth/callback.js
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
+import { supabase } from '@/lib/supabase';
 
 export default function AuthCallback() {
-  const router = useRouter()
+  const router = useRouter();
+  const [status, setStatus] = useState('처리 중...');
 
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        // Handle the OAuth callback
-        const { data, error } = await supabase.auth.getSession()
+        console.log('Auth callback started');
+        
+        // Handle the OAuth callback - this is crucial for Kakao
+        const { data, error } = await supabase.auth.exchangeCodeForSession(window.location.href);
         
         if (error) {
-          console.error('Auth callback error:', error)
-          router.push('/auth/login?error=callback-error')
-          return
+          console.error('OAuth exchange error:', error);
+          setStatus('로그인에 실패했습니다: ' + error.message);
+          setTimeout(() => {
+            router.push('/login');
+          }, 2000);
+          return;
         }
 
-        if (data?.session) {
-          // Successfully authenticated
-          console.log('Auth successful:', data.session.user)
+        console.log('OAuth exchange successful:', data);
+
+        // Verify we have a session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('Session error:', sessionError);
+          setStatus('세션을 가져오는데 실패했습니다.');
+          setTimeout(() => {
+            router.push('/login');
+          }, 2000);
+          return;
+        }
+
+        if (session) {
+          console.log('Session verified:', session.user.id);
+          setStatus('로그인 성공! 잠시만 기다려주세요...');
           
-          // Redirect to intended page or dashboard
-          const returnTo = localStorage.getItem('authReturnTo') || '/'
-          localStorage.removeItem('authReturnTo')
+          // Get returnTo from localStorage or default to home
+          const returnTo = localStorage.getItem('returnTo') || '/';
+          localStorage.removeItem('returnTo'); // Clean up
           
-          router.push(returnTo)
+          // Redirect after a short delay
+          setTimeout(() => {
+            router.push(returnTo);
+          }, 1500);
         } else {
-          // No session found
-          router.push('/auth/login?error=no-session')
+          console.error('No session found after OAuth');
+          setStatus('인증 정보를 찾을 수 없습니다.');
+          setTimeout(() => {
+            router.push('/login');
+          }, 2000);
         }
       } catch (error) {
-        console.error('Unexpected error in auth callback:', error)
-        router.push('/auth/login?error=unexpected')
+        console.error('Auth callback error:', error);
+        setStatus('오류가 발생했습니다: ' + error.message);
+        setTimeout(() => {
+          router.push('/login');
+        }, 2000);
       }
-    }
+    };
 
-    handleAuthCallback()
-  }, [router])
+    // Only run if we have the router ready and are in browser
+    if (router.isReady && typeof window !== 'undefined') {
+      handleAuthCallback();
+    }
+  }, [router.isReady, router]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <p className="text-gray-600">로그인 처리 중...</p>
+    <div className="min-h-screen bg-gray-50 flex flex-col justify-center items-center">
+      <div className="bg-white p-8 rounded-lg shadow-md text-center max-w-md w-full mx-4">
+        <div className="mb-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+        </div>
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">카카오톡 로그인</h2>
+        <p className="text-gray-600">{status}</p>
       </div>
     </div>
-  )
+  );
 }

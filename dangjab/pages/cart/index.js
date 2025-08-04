@@ -50,7 +50,7 @@ function EmptyCart() {
           href="/"
           className="inline-block bg-gray-900 hover:bg-gray-800 text-white font-semibold py-3 px-8 rounded-xl transition-colors duration-200"
         >
-          쇼핑 계속하기
+          상품 보기
         </Link>
       </div>
     </div>

@@ -116,7 +116,7 @@ export default function FeaturedProducts() {
                       className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-all duration-100 group-hover:opacity-0"
                       onError={(e) => {
                         // Fallback placeholder
-                        e.target.src = '/api/placeholder/400/400';
+                        e.target.src = '/images/logo.png';
                       }}
                     />
                     
