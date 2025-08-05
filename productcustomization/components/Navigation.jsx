@@ -3,12 +3,12 @@ import React from 'react';
 
 export default function Navigation() {
   const categories = [
-    '티셔츠',
-    '후드티',
-    '맨투맨',
     '텀블러',
     '머그잔',
-    '에코백'
+    '에코백',
+    '티셔츠',
+    '후드티',
+    '맨투맨'
 
   ];
 

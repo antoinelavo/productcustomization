@@ -5,16 +5,17 @@ import React, { useState, useRef, useEffect } from 'react'
 import { Trash2, RotateCw, Lock } from 'lucide-react'
 import CurvedText from '@/components/2DShirt/CurvedText'
 
-const CANVAS_SIZE = {
-  width: 500,
-  height: 600
+const CANVAS_SIZES = {
+  mobile: { width: 300, height: 400 },
+  desktop: { width: 500, height: 600 }
 }
 
+
 const DESIGN_AREA = {
-  x: 130,      // 25% from left
+  x: 135,      // 25% from left
   y: 100,      // Where design area starts
-  width: 200,  // 50% of canvas width
-  height: 300  // Design area height
+  width: 180,  // 50% of canvas width
+  height: 250  // Design area height
 }
 
 const ELEMENT_TYPES = {
@@ -35,9 +36,19 @@ export default function TshirtCanvas({
   isEditingMode
 }) {
   const [dragState, setDragState] = useState(null)
+  const [isMobile, setIsMobile] = useState(false)
   const [resizeState, setResizeState] = useState(null)
   const [rotateState, setRotateState] = useState(null)
   const canvasRef = useRef(null)
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 640)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  const canvasSize = isMobile ? CANVAS_SIZES.mobile : CANVAS_SIZES.desktop
 
   // Calculate blue selection box bounds for text using accurate text measurement
   const getTextSelectionBounds = (element) => {
@@ -428,10 +439,10 @@ export default function TshirtCanvas({
       {/* T-shirt Container */}
       <div 
         ref={canvasRef}
-        className="relative rounded-lg overflow-hidden"
+        className="relative rounded-lg overflow-hidden scale-75 sm:scale-100 origin-top"
         style={{ 
-          width: CANVAS_SIZE.width, 
-          height: CANVAS_SIZE.height,
+          width: canvasSize.width, 
+          height: canvasSize.height,
           background: 'transparent'
         }}
         onClick={handleCanvasClick}
@@ -440,7 +451,7 @@ export default function TshirtCanvas({
         <img
           src="/images/tumbler.png"
           alt="T-shirt"
-          className="absolute inset-0 w-full h-full object-contain"
+          className="absolute inset-0 w-full h-full object-contain scale-75 sm:scale-100 origin-top"
           style={{
             backgroundSize: 'contain',
             backgroundRepeat: 'no-repeat',

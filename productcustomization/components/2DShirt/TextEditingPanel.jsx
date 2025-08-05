@@ -30,12 +30,7 @@ const FONT_FAMILIES = [
 ]
 
 const TEXT_COLORS = [
-  // Row 1
-  ['#1a237e', '#7b1fa2', '#2e7d32', '#000000', '#ffffff', '#29b6f6', '#ff9800', '#ffeb3b', '#f8bbd9', '#e1bee7', '#8d6e63'],
-  // Row 2  
-  ['#c5cae9', '#f3e5f5', '#388e3c', '#ffeb3b', '#e91e63', '#4caf50', '#9e9e9e', '#f8bbd9', '#3f51b5', '#d32f2f', '#e1f5fe'],
-  // Row 3
-  ['#eeeeee', '#d4af37', '#c0ff8c', '#e91e63', '#4caf50', '#2196f3', '#fff9c4', '#757575', '#b3e5fc', '#8bc34a']
+  ['#1a237e', '#7b1fa2', '#2e7d32', '#000000', '#ffffff', '#29b6f6', '#ff9800', '#ffeb3b', '#f8bbd9', '#e1bee7', '#8d6e63']
 ]
 
 const FONT_SIZES = [8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 60, 72]

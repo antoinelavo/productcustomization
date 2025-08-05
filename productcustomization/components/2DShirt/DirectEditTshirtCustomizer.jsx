@@ -2,7 +2,7 @@
 'use client'
 
 import React, { useState, useRef } from 'react'
-import { ArrowLeft, Type, Image, Download, Palette, Shirt, Package, Layers, Edit3 } from 'lucide-react'
+import { ArrowLeft, Type, Image, Download, Palette, Shirt, Package, Layers, Edit3, Menu, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import DefaultPanel from '@/components/2DShirt/DefaultPanel'
 import TemplatePanel from '@/components/2DShirt/TemplatePanel'
@@ -37,6 +37,9 @@ export default function DirectEditTshirtCustomizer({
   // Product options state
   const [selectedSize, setSelectedSize] = useState('M')
   const [quantity, setQuantity] = useState(1)
+  
+  // Mobile drawer state
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false)
   
   const fileInputRef = useRef(null)
   
@@ -166,6 +169,15 @@ export default function DirectEditTshirtCustomizer({
     }
   }
 
+  // Mobile drawer functions
+  const toggleMobileDrawer = () => {
+    setIsMobileDrawerOpen(!isMobileDrawerOpen)
+  }
+
+  const closeMobileDrawer = () => {
+    setIsMobileDrawerOpen(false)
+  }
+
   // Panel button configuration
   const panelButtons = [
     // { 
@@ -195,12 +207,21 @@ export default function DirectEditTshirtCustomizer({
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 relative">
+      {/* Mobile Menu Button - Only visible on small screens and when drawer is closed */}
+      <button
+        onClick={toggleMobileDrawer}
+        className={`fixed top-10 right-4 z-50 w-12 h-12 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-300 sm:hidden ${
+          isMobileDrawerOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'
+        }`}
+      >
+        <Menu size={20} />
+      </button>
 
       {/* Main Content */}
       <div className="flex max-w-7xl mx-auto min-h-screen">
         {/* Center - T-shirt Canvas */}
-        <div className="flex-1 p-8 flex justify-center items-center">
+        <div className="flex-1 p-4 sm:p-8 flex justify-center items-center">
           <TshirtCanvas
             textElements={textElements}
             imageElements={imageElements}
@@ -215,10 +236,16 @@ export default function DirectEditTshirtCustomizer({
           />
         </div>
 
-        {/* Right Panel Controls */}
-        <div className="flex">
+        {/* Right Panel Controls - Desktop: always visible, Mobile: drawer */}
+        <div className={`
+          flex
+          sm:relative sm:translate-x-0
+          fixed inset-y-0 right-0 z-40
+          transition-transform duration-300 ease-in-out
+          ${isMobileDrawerOpen ? 'translate-x-0' : 'translate-x-full sm:translate-x-0'}
+        `}>
           {/* Panel Selection Buttons */}
-          <div className="w-16 flex flex-col items-center py-6 space-y-4">
+          <div className="w-16 flex flex-col items-center py-6 space-y-4 bg-white sm:bg-transparent border-r border-gray-200">
             {panelButtons.map((button) => {
               const Icon = button.icon
               return (
@@ -239,7 +266,15 @@ export default function DirectEditTshirtCustomizer({
           </div>
 
           {/* Dynamic Panel Content */}
-          <div className="w-80 bg-white border-l border-gray-200">
+          <div className="w-80 bg-white border-l border-gray-200 relative">
+            {/* Mobile Close Button */}
+            <button
+              onClick={closeMobileDrawer}
+              className="absolute top-4 right-4 z-10 w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors sm:hidden"
+            >
+              <X size={16} />
+            </button>
+
             <AnimatePresence mode="wait">
               {activePanel === PANEL_TYPES.DEFAULT && (
                 <motion.div
@@ -336,6 +371,16 @@ export default function DirectEditTshirtCustomizer({
           </div>
         </div>
       </div>
+
+      {/* Mobile Drawer Backdrop - Only visible on small screens when drawer is open */}
+      <div 
+        className={`
+          fixed inset-0 bg-black bg-opacity-50 z-30 sm:hidden
+          transition-opacity duration-300
+          ${isMobileDrawerOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}
+        `}
+        onClick={closeMobileDrawer}
+      />
     </div>
   )
 }
