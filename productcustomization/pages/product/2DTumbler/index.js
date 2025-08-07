@@ -14,7 +14,7 @@ export default function TshirtDesignPage() {
     textElements: [
       {
         id: 'toptext',
-        text: '형아 텀블러',
+        text: '나는 귀여운 뽀삐!',
         x: 230,
         y: 135,
         fontSize: 20,
@@ -35,7 +35,7 @@ export default function TshirtDesignPage() {
 
       {
         id: 'bottomtext',
-        text: '나는 하치!',
+        text: '뽀삐 텀블러!',
         x: 230,
         y: 285,
         fontSize: 20,
@@ -58,7 +58,7 @@ export default function TshirtDesignPage() {
     imageElements: [ // Add this array
     {
       id: 'defaultdog',
-      src: '/dogs/default.png', // Path to your image
+      src: '/dogs/bordercollie.png', // Path to your image
       x: 230, // Position
       y: 210,
       width: 100, // Size

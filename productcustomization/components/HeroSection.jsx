@@ -9,10 +9,9 @@ export default function HeroSection() {
     {
       id: 1,
       image: "/images/hero-banner-1.png", // First promotional image
-      alt: "강아지 커스텀 티셔츠 프로모션 1",
-      title: "귀여운 우리 아이 얼굴이 쏙!",
-      subtitle: "댕잡았다🐶 😍 🖤",
-      description: "강아지 커스텀 티셔츠",
+      alt: "커스텀 티셔츠 프로모션",
+      title: "100% 커스텀 주문제작 티셔츠!",
+      subtitle: "예쁜 옷을 만들어보세요.",
       buttonText: "자세히 보기",
       bgColor: "from-yellow-400 to-orange-500"
     }

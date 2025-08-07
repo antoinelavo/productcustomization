@@ -4,10 +4,11 @@
 import React, { useState, useRef } from 'react'
 import { ArrowLeft, Type, Image, Download, Palette, Shirt, Package, Layers, Edit3, Menu, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import DefaultPanel from '@/components/2DShirt/DefaultPanel'
-import TextEditingPanel from '@/components/2DShirt/TextEditingPanel'
-import ImagePanel from '@/components/2DShirt/ImagePanel'
-import TshirtCanvas from '@/components/2DShirt/TshirtCanvas'
+import DefaultPanel from '@/components/Testcustom/DefaultPanel'
+import TemplatePanel from '@/components/Testcustom/TemplatePanel'
+import TextEditingPanel from '@/components/Testcustom/TextEditingPanel'
+import ImagePanel from '@/components/Testcustom/ImagePanel'
+import TshirtCanvas from '@/components/Testcustom/TshirtCanvas'
 
 const PANEL_TYPES = {
   DEFAULT: 'default',

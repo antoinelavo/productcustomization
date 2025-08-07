@@ -3,7 +3,7 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import { Trash2, RotateCw, Lock } from 'lucide-react'
-import CurvedText from '@/components/Testcustom/CurvedText'
+import CurvedText from '@/components/2DShirt/CurvedText'
 
 const CANVAS_SIZES = {
   mobile: { width: 300, height: 400 },
@@ -12,10 +12,10 @@ const CANVAS_SIZES = {
 
 
 const DESIGN_AREA = {
-  x: 150,      // 25% from left
-  y: 150,      // Where design area starts
-  width: 200,  // 50% of canvas width
-  height: 300  // Design area height
+  x: 135,      // 25% from left
+  y: 100,      // Where design area starts
+  width: 180,  // 50% of canvas width
+  height: 250  // Design area height
 }
 
 const ELEMENT_TYPES = {
@@ -449,7 +449,7 @@ export default function TshirtCanvas({
       >
         {/* T-shirt Background Image */}
         <img
-          src="/images/tshirt.png"
+          src="/images/tumbler.png"
           alt="T-shirt"
           className="absolute inset-0 w-full h-full object-contain scale-75 sm:scale-100 origin-top"
           style={{

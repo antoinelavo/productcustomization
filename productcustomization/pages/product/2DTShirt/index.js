@@ -1,6 +1,6 @@
 // Modified textcustom/index.js - Starts editing interface immediately
 import React, { useState } from 'react'
-import DirectEditTshirtCustomizer from '@/components/Testcustom/DirectEditTshirtCustomizer'
+import DirectEditTshirtCustomizer from '@/components/2DShirt/DirectEditTshirtCustomizer'
 import Layout from '@/components/Layout';
 import ReviewsSection from '@/components/ReviewsSection';
 
@@ -14,9 +14,9 @@ export default function TshirtDesignPage() {
     textElements: [
       {
         id: 'toptext',
-        text: '형아 텀블러',
-        x: 230,
-        y: 135,
+        text: '나는 귀여운 뽀삐!',
+        x: 245,
+        y: 185,
         fontSize: 20,
         fontFamily: 'Arial',
         color: '#000000ff',
@@ -35,9 +35,9 @@ export default function TshirtDesignPage() {
 
       {
         id: 'bottomtext',
-        text: '나는 하치!',
-        x: 230,
-        y: 285,
+        text: '뽀삐 티셔츠!',
+        x: 245,
+        y: 335,
         fontSize: 20,
         fontFamily: 'Arial',
         color: '#000000ff',
@@ -58,9 +58,9 @@ export default function TshirtDesignPage() {
     imageElements: [ // Add this array
     {
       id: 'defaultdog',
-      src: '/dogs/default.png', // Path to your image
-      x: 230, // Position
-      y: 210,
+      src: '/dogs/bordercollie.png', // Path to your image
+      x: 245, // Position
+      y: 260,
       width: 100, // Size
       height: 100,
       rotation: 0

@@ -79,43 +79,12 @@ function TextCustomizer({ textSettings, onTextChange, templateMode = false }) {
             type="text"
             value={textSettings.topText || ''}
             onChange={(e) => handleTextChange('topText', e.target.value)}
-            placeholder="예: BBOSIK, MY DOG"
+            placeholder="예: 뽀삐, My Dog"
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm"
             maxLength={20}
           />
         </div>
 
-        {/* Left and Right Text (Dates) - Hidden in template mode */}
-        {!templateMode && (
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                왼쪽 날짜
-              </label>
-              <input
-                type="text"
-                value={textSettings.leftText || ''}
-                onChange={(e) => handleTextChange('leftText', e.target.value)}
-                placeholder="2023.05.21"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm"
-                maxLength={15}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                오른쪽 날짜
-              </label>
-              <input
-                type="text"
-                value={textSettings.rightText || ''}
-                onChange={(e) => handleTextChange('rightText', e.target.value)}
-                placeholder="2021.02.25"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm"
-                maxLength={15}
-              />
-            </div>
-          </div>
-        )}
 
         {/* Bottom Text - Hidden in template mode */}
         {!templateMode && (
@@ -127,7 +96,7 @@ function TextCustomizer({ textSettings, onTextChange, templateMode = false }) {
               type="text"
               value={textSettings.bottomText || ''}
               onChange={(e) => handleTextChange('bottomText', e.target.value)}
-              placeholder="예: The reasons why I live"
+              placeholder="예: 귀여운 내 강아지!"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm"
               maxLength={30}
             />
